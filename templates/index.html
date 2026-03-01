@@ -266,7 +266,9 @@
                     </div>
                     <button id="refreshHistoryBtn" class="btn btn-secondary btn-icon" title="刷新">↻</button>
                 </div>
+                <div class="customer-list-info" id="historyInfo"></div>
                 <div id="historyContainer"></div>
+                <div class="customer-pagination" id="historyPagination"></div>
             </div>
 
             <!-- ===== 写邮件 ===== -->
@@ -396,7 +398,9 @@
                     </div>
                     <button id="refreshComposeHistoryBtn" class="btn btn-secondary btn-icon" title="刷新">↻</button>
                 </div>
+                <div class="customer-list-info" id="composeHistoryInfo"></div>
                 <div id="composeHistoryContainer"></div>
+                <div class="customer-pagination" id="composeHistoryPagination"></div>
             </div>
 
             <!-- ===== 回复模板 ===== -->
@@ -407,8 +411,11 @@
                 </div>
                 <div class="page-toolbar">
                     <button id="addTemplateBtn" class="btn btn-primary">添加新模板</button>
+                    <input type="text" id="templatesSearch" class="search-input" placeholder="搜索模板名称、场景…" style="flex:1;max-width:300px;">
                 </div>
+                <div class="customer-list-info" id="templatesInfo"></div>
                 <div id="templatesContainer" class="templates-list"></div>
+                <div class="customer-pagination" id="templatesPagination"></div>
             </div>
 
             <!-- ===== 撰写模板 ===== -->
@@ -419,8 +426,11 @@
                 </div>
                 <div class="page-toolbar">
                     <button id="addComposeTemplateBtn" class="btn btn-primary">添加撰写模板</button>
+                    <input type="text" id="composeTemplatesSearch" class="search-input" placeholder="搜索模板名称、类型…" style="flex:1;max-width:300px;">
                 </div>
+                <div class="customer-list-info" id="composeTemplatesInfo"></div>
                 <div id="composeTemplatesContainer"></div>
+                <div class="customer-pagination" id="composeTemplatesPagination"></div>
             </div>
 
             <!-- ===== 客户管理 ===== -->
@@ -429,18 +439,29 @@
                     <h2>客户管理</h2>
                     <p class="page-desc">管理客户档案、背景标签和合作状态，生成邮件时自动带入客户背景</p>
                 </div>
-                <div class="page-toolbar">
-                    <button id="addCustomerBtn" class="btn btn-primary">添加客户</button>
-                    <button id="importCsvBtn" class="btn btn-secondary">CSV 导入</button>
-                    <select id="customerStatusFilter" class="customer-status-filter">
-                        <option value="">全部状态</option>
-                        <option value="prospect">潜在客户</option>
-                        <option value="active">活跃客户</option>
-                        <option value="paused">暂停跟进</option>
-                        <option value="closed">已关闭</option>
-                    </select>
+                <div class="page-toolbar customer-toolbar">
+                    <div class="customer-toolbar-left">
+                        <button id="addCustomerBtn" class="btn btn-primary">添加客户</button>
+                        <button id="importCsvBtn" class="btn btn-secondary">CSV 导入</button>
+                    </div>
+                    <div class="customer-toolbar-filters">
+                        <input type="text" id="customerSearchInput" class="search-input customer-search-input"
+                            placeholder="搜索姓名、公司、邮箱、标签…">
+                        <select id="customerStatusFilter" class="customer-status-filter">
+                            <option value="">全部状态</option>
+                            <option value="prospect">潜在客户</option>
+                            <option value="active">活跃客户</option>
+                            <option value="paused">暂停跟进</option>
+                            <option value="closed">已关闭</option>
+                        </select>
+                        <select id="customerCountryFilter" class="customer-status-filter">
+                            <option value="">全部国家</option>
+                        </select>
+                    </div>
                 </div>
+                <div class="customer-list-info" id="customerListInfo"></div>
                 <div id="customersContainer"></div>
+                <div class="customer-pagination" id="customerPagination"></div>
             </div>
 
             <!-- ===== 全局设置 ===== -->
@@ -550,8 +571,16 @@
                 </div>
                 <div class="page-toolbar">
                     <button id="refreshFeedbackBtn" class="btn btn-secondary">刷新</button>
+                    <input type="text" id="feedbackAdminSearch" class="search-input" placeholder="搜索内容、分类…" style="flex:1;max-width:300px;">
+                    <select id="feedbackAdminStatusFilter" class="customer-status-filter">
+                        <option value="">全部状态</option>
+                        <option value="pending">待处理</option>
+                        <option value="done">已完成</option>
+                    </select>
                 </div>
+                <div class="customer-list-info" id="feedbackAdminInfo"></div>
                 <div id="feedbackAdminContainer"></div>
+                <div class="customer-pagination" id="feedbackAdminPagination"></div>
             </div>
 
             <!-- ===== 使用手册 ===== -->
@@ -787,13 +816,16 @@
                 </div>
                 <div class="page-toolbar">
                     <button id="refreshInboxBtn" class="btn btn-primary">刷新收件箱</button>
+                    <input type="text" id="inboxSearch" class="search-input" placeholder="搜索发件人、主题…" style="flex:1;max-width:300px;">
                     <span class="inbox-status" id="inboxStatus"></span>
                 </div>
+                <div class="customer-list-info" id="inboxInfo"></div>
                 <div id="inboxContainer">
                     <div class="email-center-tip">
                         点击「刷新收件箱」加载最新邮件（需先在全局设置中配置邮箱账号）
                     </div>
                 </div>
+                <div class="customer-pagination" id="inboxPagination"></div>
             </div>
 
             <!-- ===== 发邮件（单发） ===== -->
@@ -946,8 +978,16 @@
                 </div>
                 <div class="page-toolbar">
                     <button id="refreshSentLogBtn" class="btn btn-secondary">刷新</button>
+                    <input type="text" id="sentLogSearch" class="search-input" placeholder="搜索收件人、主题、客户…" style="flex:1;max-width:300px;">
+                    <select id="sentLogStatusFilter" class="customer-status-filter">
+                        <option value="">全部状态</option>
+                        <option value="sent">成功</option>
+                        <option value="failed">失败</option>
+                    </select>
                 </div>
+                <div class="customer-list-info" id="sentLogInfo"></div>
                 <div id="sentLogContainer"></div>
+                <div class="customer-pagination" id="sentLogPagination"></div>
             </div>
 
             <!-- ===== 联系统计 ===== -->
@@ -963,10 +1003,13 @@
                             style="width:60px;padding:4px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:0.88rem;text-align:center;">
                         天未联系标记为逾期
                     </label>
+                    <input type="text" id="contactStatsSearch" class="search-input" placeholder="搜索客户名、公司…" style="flex:1;max-width:280px;">
                     <button id="refreshContactStatsBtn" class="btn btn-secondary">刷新</button>
                 </div>
                 <div id="contactStatsSummary"></div>
+                <div class="customer-list-info" id="contactStatsInfo"></div>
                 <div id="contactStatsContainer"></div>
+                <div class="customer-pagination" id="contactStatsPagination"></div>
             </div>
 
             <!-- ===== 邮件模板 ===== -->
@@ -1018,9 +1061,12 @@
                 <!-- 工具栏 + 列表 -->
                 <div class="page-toolbar" style="margin-top:20px;">
                     <button class="btn btn-primary" onclick="openEmailTemplateModal()">+ 新建模板</button>
+                    <input type="text" id="emailTemplatesSearch" class="search-input" placeholder="搜索模板名称、主题…" style="flex:1;max-width:300px;">
                     <button id="refreshEmailTemplatesBtn" class="btn btn-secondary">刷新</button>
                 </div>
+                <div class="customer-list-info" id="emailTemplatesInfo"></div>
                 <div id="emailTemplateList"></div>
+                <div class="customer-pagination" id="emailTemplatesPagination"></div>
             </div>
 
             <!-- 邮件模板选择弹窗占位（实际弹窗在 Modals 区） -->
@@ -1192,8 +1238,12 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="customerCountry">国家/地区</label>
-                        <input type="text" id="customerCountry" placeholder="例：美国、德国、英国">
+                        <label for="customerCountryInput">国家/地区</label>
+                        <div class="country-combobox" id="customerCountryCombobox">
+                            <input type="text" id="customerCountryInput" class="form-input"
+                                placeholder="输入或选择国家…" autocomplete="off">
+                            <div class="country-dropdown" id="customerCountryDropdown"></div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="customerStatus">合作状态</label>

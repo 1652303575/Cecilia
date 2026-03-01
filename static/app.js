@@ -1,6 +1,39 @@
 // API Base URL
 const API_BASE = '';
 
+// ===== 通用分页工具 =====
+// renderPaged(items, pageSize, curPage, renderFn, containerEl, paginationEl, onPageChange, infoEl, infoLabel)
+function renderPaged(items, pageSize, curPage, renderFn, containerEl, paginationEl, onPageChange, infoEl, infoLabel) {
+    const total = items.length;
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    const cur   = Math.min(Math.max(1, curPage), pages);
+
+    if (infoEl) infoEl.textContent = total ? `共 ${total} ${infoLabel || '条'}` : '';
+
+    const slice = items.slice((cur - 1) * pageSize, cur * pageSize);
+    renderFn(slice, total);
+
+    if (!paginationEl) return;
+    if (pages <= 1) { paginationEl.innerHTML = ''; return; }
+
+    const range = [];
+    for (let i = 1; i <= pages; i++) {
+        if (i === 1 || i === pages || (i >= cur - 2 && i <= cur + 2)) range.push(i);
+        else if (range[range.length - 1] !== '…') range.push('…');
+    }
+    let html = `<button class="page-btn" ${cur===1?'disabled':''} data-p="${cur-1}">‹</button>`;
+    range.forEach(p => {
+        if (p === '…') html += `<span class="page-btn" style="cursor:default;border:none;opacity:.5">…</span>`;
+        else html += `<button class="page-btn${p===cur?' active':''}" data-p="${p}">${p}</button>`;
+    });
+    html += `<button class="page-btn" ${cur===pages?'disabled':''} data-p="${cur+1}">›</button>`;
+    paginationEl.innerHTML = html;
+
+    paginationEl.querySelectorAll('button[data-p]').forEach(btn => {
+        btn.addEventListener('click', () => onPageChange(parseInt(btn.dataset.p)));
+    });
+}
+
 // 时间格式化：数据库存的是UTC，显示时转为北京时间
 function fmtTime(utcStr, opts) {
     if (!utcStr) return '';
@@ -440,46 +473,73 @@ templateForm.addEventListener('submit', async (e) => {
 });
 
 // Load templates
+let _templatesAllData = [];
+let _templatesPage = 1;
+const _TEMPLATES_PAGE_SIZE = 10;
+
+function _applyTemplatesFilter() {
+    const q = document.getElementById('templatesSearch').value.trim().toLowerCase();
+    const filtered = q
+        ? _templatesAllData.filter(t =>
+            (t.name || '').toLowerCase().includes(q) ||
+            (t.scenario || '').toLowerCase().includes(q) ||
+            (t.tone || '').toLowerCase().includes(q) ||
+            (t.description || '').toLowerCase().includes(q))
+        : _templatesAllData;
+    renderPaged(filtered, _TEMPLATES_PAGE_SIZE, _templatesPage,
+        _renderTemplatesSlice,
+        document.getElementById('templatesContainer'),
+        document.getElementById('templatesPagination'),
+        p => { _templatesPage = p; _applyTemplatesFilter(); },
+        document.getElementById('templatesInfo'), '个模板'
+    );
+}
+
+function _renderTemplatesSlice(slice, total) {
+    const container = document.getElementById('templatesContainer');
+    if (!total) {
+        container.innerHTML = '<div class="empty-state"><h3>暂无模板</h3><p>点击"添加新模板"创建您的第一个模板</p></div>';
+        return;
+    }
+    container.innerHTML = '';
+    slice.forEach(template => {
+        const templateCard = document.createElement('div');
+        templateCard.className = 'template-card';
+        templateCard.innerHTML = `
+            <div class="template-card-header">
+                <div>
+                    <h3>${escapeHtml(template.name)}</h3>
+                    <div class="template-meta">
+                        <span class="meta-item">场景: ${escapeHtml(template.scenario)}</span>
+                        <span class="meta-item">语气: ${escapeHtml(template.tone)}</span>
+                    </div>
+                    ${template.description ? `<p style="color: #666; margin-top: 8px; font-size: 0.9rem;">${escapeHtml(template.description)}</p>` : ''}
+                    ${template.extra_requirements ? `<div style="margin-top: 8px; background: #fff8e1; border-left: 3px solid #f0a500; padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; color: #555;"><strong>额外要求：</strong>${escapeHtml(template.extra_requirements)}</div>` : ''}
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-small btn-danger" onclick="deleteTemplate(${template.id})">删除</button>
+                </div>
+            </div>
+        `;
+        container.appendChild(templateCard);
+    });
+}
+
 async function loadTemplates() {
     const container = document.getElementById('templatesContainer');
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-
     try {
         const response = await fetch(`${API_BASE}/api/templates`, { credentials: 'include' });
-        const templates = await response.json();
-
-        if (templates.length === 0) {
-            container.innerHTML = '<div class="empty-state"><h3>暂无模板</h3><p>点击"添加新模板"创建您的第一个模板</p></div>';
-            return;
-        }
-
-        container.innerHTML = '';
-        templates.forEach(template => {
-            const templateCard = document.createElement('div');
-            templateCard.className = 'template-card';
-            templateCard.innerHTML = `
-                <div class="template-card-header">
-                    <div>
-                        <h3>${escapeHtml(template.name)}</h3>
-                        <div class="template-meta">
-                            <span class="meta-item">场景: ${escapeHtml(template.scenario)}</span>
-                            <span class="meta-item">语气: ${escapeHtml(template.tone)}</span>
-                        </div>
-                        ${template.description ? `<p style="color: #666; margin-top: 8px; font-size: 0.9rem;">${escapeHtml(template.description)}</p>` : ''}
-                        ${template.extra_requirements ? `<div style="margin-top: 8px; background: #fff8e1; border-left: 3px solid #f0a500; padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; color: #555;"><strong>额外要求：</strong>${escapeHtml(template.extra_requirements)}</div>` : ''}
-                    </div>
-                    <div class="card-actions">
-                        <button class="btn btn-small btn-danger" onclick="deleteTemplate(${template.id})">删除</button>
-                    </div>
-                </div>
-            `;
-            container.appendChild(templateCard);
-        });
+        _templatesAllData = await response.json();
+        _templatesPage = 1;
+        _applyTemplatesFilter();
     } catch (error) {
         console.error('Error:', error);
         container.innerHTML = '<div class="error-message">加载模板失败</div>';
     }
 }
+
+document.getElementById('templatesSearch').addEventListener('input', () => { _templatesPage = 1; _applyTemplatesFilter(); });
 
 // Delete template
 async function deleteTemplate(id) {
@@ -554,91 +614,89 @@ templateSelectorModal.querySelector('.close').addEventListener('click', () => {
 });
 
 // Load history
-async function loadHistory(q = '', customer = '') {
+let _historyAllData = [];
+let _historyPage = 1;
+
+async function loadHistory() {
     const container = document.getElementById('historyContainer');
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-
     try {
-        const params = new URLSearchParams({ limit: 50 });
-        if (q) params.set('q', q);
-        if (customer) params.set('customer', customer);
-        const response = await fetch(`${API_BASE}/api/history?${params}`, { credentials: 'include' });
-        const history = await response.json();
-
-        if (history.length === 0) {
-            container.innerHTML = q || customer
-                ? '<div class="empty-state"><h3>未找到匹配记录</h3><p>尝试修改搜索条件</p></div>'
-                : '<div class="empty-state"><h3>暂无历史记录</h3><p>开始生成您的第一个邮件回复吧！</p></div>';
-            return;
-        }
-
-        const table = document.createElement('table');
-        table.className = 'history-table';
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th style="width:110px">时间</th>
-                    <th style="width:90px">场景</th>
-                    <th style="width:80px">语气</th>
-                    <th style="width:160px">标题</th>
-                    <th>生成回复</th>
-                    <th style="width:70px">操作</th>
-                </tr>
-            </thead>
-            <tbody id="historyTbody"></tbody>
-        `;
-        container.innerHTML = '';
-        container.appendChild(table);
-
-        const tbody = document.getElementById('historyTbody');
+        const response = await fetch(`${API_BASE}/api/history?limit=500`, { credentials: 'include' });
+        _historyAllData = await response.json();
         window._historyData = {};
         window._historyItems = {};
-
-        history.forEach(item => {
-            window._historyData[item.id] = {
-                zh: item.generated_reply,
-                en: item.reply_en || null,
-                wechat: item.reply_wechat || null
-            };
+        _historyAllData.forEach(item => {
+            window._historyData[item.id] = { zh: item.generated_reply, en: item.reply_en || null, wechat: item.reply_wechat || null };
             window._historyItems[item.id] = item;
-
-            const createdAt = fmtTime(item.created_at);
-
-            const hasTabs = item.reply_en || item.reply_wechat;
-            const replyCell = hasTabs ? `
-                <div class="reply-tabs">
-                    <div class="reply-tab-btns">
-                        <button class="reply-tab-btn active" onclick="switchReplyTab(${item.id}, 'zh', this)">中文</button>
-                        ${item.reply_en ? `<button class="reply-tab-btn" onclick="switchReplyTab(${item.id}, 'en', this)">英文邮件</button>` : ''}
-                        ${item.reply_wechat ? `<button class="reply-tab-btn" onclick="switchReplyTab(${item.id}, 'wechat', this)">微信</button>` : ''}
-                    </div>
-                    <div id="reply-content-${item.id}" class="cell-text-clamp">${escapeHtml(item.generated_reply)}</div>
-                </div>
-            ` : `<div class="cell-text-clamp">${escapeHtml(item.generated_reply)}</div>`;
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="cell-time">${createdAt}</td>
-                <td><span class="tag">${escapeHtml(item.scenario)}</span></td>
-                <td><span class="tag tag-tone">${escapeHtml(item.tone)}</span></td>
-                <td class="cell-content">
-                    <div class="cell-title">${item.title ? escapeHtml(item.title) : '<span style="color:#bbb">—</span>'}</div>
-                </td>
-                <td class="cell-content">
-                    <div class="cell-text-clamp">${escapeHtml(item.generated_reply)}</div>
-                </td>
-                <td class="cell-actions">
-                    <button class="btn btn-small btn-view" onclick="openHistoryDetail(${item.id})">查看</button>
-                    <button class="btn btn-small btn-danger" onclick="deleteHistory(${item.id})">删除</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
         });
-
+        _historyPage = 1;
+        _applyHistoryFilter();
     } catch (error) {
-        console.error('Error:', error);
         container.innerHTML = '<div class="error-message">加载历史记录失败</div>';
     }
+}
+
+function _applyHistoryFilter() {
+    const q        = (document.getElementById('historySearchQ').value || '').trim().toLowerCase();
+    const customer = document.getElementById('historySearchCustomer').value;
+    const filtered = _historyAllData.filter(item => {
+        if (customer && item.customer_name !== customer) return false;
+        if (q) {
+            const hay = [item.title, item.scenario, item.tone, item.generated_reply, item.reply_en, item.customer_name]
+                .filter(Boolean).join(' ').toLowerCase();
+            if (!hay.includes(q)) return false;
+        }
+        return true;
+    });
+    renderPaged(filtered, 15, _historyPage,
+        (slice, total) => _renderHistoryPage(slice, total, q || customer),
+        null,
+        document.getElementById('historyPagination'),
+        p => { _historyPage = p; _applyHistoryFilter(); },
+        document.getElementById('historyInfo'),
+        '条记录'
+    );
+}
+
+function _renderHistoryPage(items, total, hasFilter) {
+    const container = document.getElementById('historyContainer');
+    if (!items.length) {
+        container.innerHTML = hasFilter
+            ? '<div class="empty-state"><h3>未找到匹配记录</h3><p>尝试修改搜索条件</p></div>'
+            : '<div class="empty-state"><h3>暂无历史记录</h3><p>开始生成您的第一个邮件回复吧！</p></div>';
+        return;
+    }
+    const tbody = items.map(item => {
+        const hasTabs = item.reply_en || item.reply_wechat;
+        const replyCell = hasTabs ? `
+            <div class="reply-tabs">
+                <div class="reply-tab-btns">
+                    <button class="reply-tab-btn active" onclick="switchReplyTab(${item.id}, 'zh', this)">中文</button>
+                    ${item.reply_en ? `<button class="reply-tab-btn" onclick="switchReplyTab(${item.id}, 'en', this)">英文邮件</button>` : ''}
+                    ${item.reply_wechat ? `<button class="reply-tab-btn" onclick="switchReplyTab(${item.id}, 'wechat', this)">微信</button>` : ''}
+                </div>
+                <div id="reply-content-${item.id}" class="cell-text-clamp">${escapeHtml(item.generated_reply)}</div>
+            </div>` : `<div class="cell-text-clamp">${escapeHtml(item.generated_reply)}</div>`;
+        return `<tr>
+            <td class="cell-time">${fmtTime(item.created_at)}</td>
+            <td><span class="tag">${escapeHtml(item.scenario)}</span></td>
+            <td><span class="tag tag-tone">${escapeHtml(item.tone)}</span></td>
+            <td class="cell-content"><div class="cell-title">${item.title ? escapeHtml(item.title) : '<span style="color:#bbb">—</span>'}</div></td>
+            <td class="cell-content">${replyCell}</td>
+            <td class="cell-actions">
+                <button class="btn btn-small btn-view" onclick="openHistoryDetail(${item.id})">查看</button>
+                <button class="btn btn-small btn-danger" onclick="deleteHistory(${item.id})">删除</button>
+            </td>
+        </tr>`;
+    }).join('');
+    container.innerHTML = `<table class="history-table">
+        <thead><tr>
+            <th style="width:110px">时间</th><th style="width:90px">场景</th>
+            <th style="width:80px">语气</th><th style="width:160px">标题</th>
+            <th>生成回复</th><th style="width:70px">操作</th>
+        </tr></thead>
+        <tbody>${tbody}</tbody>
+    </table>`;
 }
 
 // Switch reply tab in history table
@@ -749,22 +807,14 @@ async function deleteHistory(id) {
 }
 
 refreshHistoryBtn.addEventListener('click', loadHistory);
-document.getElementById('historySearchBtn').addEventListener('click', () => {
-    const q = document.getElementById('historySearchQ').value.trim();
-    const customer = document.getElementById('historySearchCustomer').value;
-    loadHistory(q, customer);
-});
+document.getElementById('historySearchBtn').addEventListener('click', () => { _historyPage = 1; _applyHistoryFilter(); });
 document.getElementById('historySearchClearBtn').addEventListener('click', () => {
     document.getElementById('historySearchQ').value = '';
     document.getElementById('historySearchCustomer').value = '';
-    loadHistory();
+    _historyPage = 1; _applyHistoryFilter();
 });
-document.getElementById('historySearchQ').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('historySearchBtn').click();
-});
-document.getElementById('historySearchCustomer').addEventListener('change', () => {
-    document.getElementById('historySearchBtn').click();
-});
+document.getElementById('historySearchQ').addEventListener('input', () => { _historyPage = 1; _applyHistoryFilter(); });
+document.getElementById('historySearchCustomer').addEventListener('change', () => { _historyPage = 1; _applyHistoryFilter(); });
 
 // Global settings
 async function loadSettings() {
@@ -1032,63 +1082,88 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
 });
 
 // Load feedback admin list
+let _feedbackAdminAllData = [];
+let _feedbackAdminPage = 1;
+const _FEEDBACK_PAGE_SIZE = 10;
+
+function _applyFeedbackAdminFilter() {
+    const q = document.getElementById('feedbackAdminSearch').value.trim().toLowerCase();
+    const statusVal = document.getElementById('feedbackAdminStatusFilter').value;
+    let filtered = _feedbackAdminAllData;
+    if (q) filtered = filtered.filter(item =>
+        (item.content || '').toLowerCase().includes(q) ||
+        (item.category || '').toLowerCase().includes(q));
+    if (statusVal) filtered = filtered.filter(item => item.status === statusVal);
+    renderPaged(filtered, _FEEDBACK_PAGE_SIZE, _feedbackAdminPage,
+        _renderFeedbackAdminSlice,
+        document.getElementById('feedbackAdminContainer'),
+        document.getElementById('feedbackAdminPagination'),
+        p => { _feedbackAdminPage = p; _applyFeedbackAdminFilter(); },
+        document.getElementById('feedbackAdminInfo'), '条反馈'
+    );
+}
+
+function _renderFeedbackAdminSlice(slice, total) {
+    const container = document.getElementById('feedbackAdminContainer');
+    if (!total) {
+        container.innerHTML = '<div class="empty-state"><h3>暂无反馈</h3><p>用户提交意见后将在此显示</p></div>';
+        return;
+    }
+    container.innerHTML = '';
+    slice.forEach(item => {
+        const createdAt = fmtTime(item.created_at);
+        const isDone = item.status === 'done';
+        let screenshotHtml = '';
+        if (item.screenshot_paths) {
+            try {
+                const paths = JSON.parse(item.screenshot_paths);
+                if (paths.length) {
+                    const thumbs = paths.map(p =>
+                        `<img src="${escapeHtml(p)}" class="feedback-screenshot-thumb"
+                              onclick="openScreenshotLightbox('${escapeHtml(p)}')"
+                              title="点击查看大图">`
+                    ).join('');
+                    screenshotHtml = `<div class="feedback-screenshot">${thumbs}</div>`;
+                }
+            } catch {}
+        }
+        const card = document.createElement('div');
+        card.className = 'feedback-card';
+        card.innerHTML = `
+            <div class="feedback-card-header">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span class="tag">${escapeHtml(item.category || '其他')}</span>
+                    <span class="status-badge ${isDone ? 'status-done' : 'status-pending'}">${isDone ? '已完成' : '待处理'}</span>
+                    <span style="color:#aaa;font-size:0.82rem">${createdAt}</span>
+                </div>
+                <div class="card-actions">
+                    ${!isDone ? `<button class="btn btn-small btn-secondary" onclick="markFeedbackDone(${item.id})">标记完成</button>` : ''}
+                    <button class="btn btn-small btn-danger" onclick="deleteFeedback(${item.id})">删除</button>
+                </div>
+            </div>
+            <div class="feedback-content">${escapeHtml(item.content)}</div>
+            ${screenshotHtml}
+        `;
+        container.appendChild(card);
+    });
+}
+
 async function loadFeedbackAdmin() {
     const container = document.getElementById('feedbackAdminContainer');
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-
     try {
         const response = await fetch(`${API_BASE}/api/feedback`, { credentials: 'include' });
-        const list = await response.json();
-
-        if (list.length === 0) {
-            container.innerHTML = '<div class="empty-state"><h3>暂无反馈</h3><p>用户提交意见后将在此显示</p></div>';
-            return;
-        }
-
-        container.innerHTML = '';
-        list.forEach(item => {
-            const createdAt = fmtTime(item.created_at);
-            const isDone = item.status === 'done';
-
-            let screenshotHtml = '';
-            if (item.screenshot_paths) {
-                try {
-                    const paths = JSON.parse(item.screenshot_paths);
-                    if (paths.length) {
-                        const thumbs = paths.map(p =>
-                            `<img src="${escapeHtml(p)}" class="feedback-screenshot-thumb"
-                                  onclick="openScreenshotLightbox('${escapeHtml(p)}')"
-                                  title="点击查看大图">`
-                        ).join('');
-                        screenshotHtml = `<div class="feedback-screenshot">${thumbs}</div>`;
-                    }
-                } catch {}
-            }
-
-            const card = document.createElement('div');
-            card.className = 'feedback-card';
-            card.innerHTML = `
-                <div class="feedback-card-header">
-                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                        <span class="tag">${escapeHtml(item.category || '其他')}</span>
-                        <span class="status-badge ${isDone ? 'status-done' : 'status-pending'}">${isDone ? '已完成' : '待处理'}</span>
-                        <span style="color:#aaa;font-size:0.82rem">${createdAt}</span>
-                    </div>
-                    <div class="card-actions">
-                        ${!isDone ? `<button class="btn btn-small btn-secondary" onclick="markFeedbackDone(${item.id})">标记完成</button>` : ''}
-                        <button class="btn btn-small btn-danger" onclick="deleteFeedback(${item.id})">删除</button>
-                    </div>
-                </div>
-                <div class="feedback-content">${escapeHtml(item.content)}</div>
-                ${screenshotHtml}
-            `;
-            container.appendChild(card);
-        });
+        _feedbackAdminAllData = await response.json();
+        _feedbackAdminPage = 1;
+        _applyFeedbackAdminFilter();
     } catch (error) {
         console.error('Error:', error);
         container.innerHTML = '<div class="error-message">加载反馈失败</div>';
     }
 }
+
+document.getElementById('feedbackAdminSearch').addEventListener('input', () => { _feedbackAdminPage = 1; _applyFeedbackAdminFilter(); });
+document.getElementById('feedbackAdminStatusFilter').addEventListener('change', () => { _feedbackAdminPage = 1; _applyFeedbackAdminFilter(); });
 
 function openScreenshotLightbox(src) {
     document.getElementById('screenshotLightboxImg').src = src;
@@ -1347,14 +1422,93 @@ _origComposeBtn.addEventListener('click', () => {
 
 // ===== 撰写历史 =====
 const _composeHistoryData = {};  // id -> record
+let _composeHistoryAllData = [];
+let _composeHistoryPage = 1;
 
-async function loadComposeHistory(q = '', customer = '') {
+async function loadComposeHistory() {
     const container = document.getElementById('composeHistoryContainer');
     container.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
     try {
-        const params = new URLSearchParams({ limit: 50 });
-        if (q) params.set('q', q);
-        if (customer) params.set('customer', customer);
+        const res = await fetch(`${API_BASE}/api/compose/history?limit=500`, { credentials: 'include' });
+        _composeHistoryAllData = await res.json();
+        _composeHistoryAllData.forEach(r => { _composeHistoryData[r.id] = r; });
+        _composeHistoryPage = 1;
+        _applyComposeHistoryFilter();
+    } catch (e) {
+        container.innerHTML = '<div class="empty-state"><p>加载失败</p></div>';
+    }
+}
+
+function _applyComposeHistoryFilter() {
+    const q        = (document.getElementById('composeHistorySearchQ').value || '').trim().toLowerCase();
+    const customer = document.getElementById('composeHistorySearchCustomer').value;
+    const filtered = _composeHistoryAllData.filter(r => {
+        if (customer && r.customer_name !== customer) return false;
+        if (q) {
+            const hay = [r.email_type, r.tone, r.reply_en, r.reply_zh, r.target_info, r.customer_name]
+                .filter(Boolean).join(' ').toLowerCase();
+            if (!hay.includes(q)) return false;
+        }
+        return true;
+    });
+    renderPaged(filtered, 10, _composeHistoryPage,
+        (slice, total) => _renderComposeHistoryPage(slice, total, q || customer),
+        null,
+        document.getElementById('composeHistoryPagination'),
+        p => { _composeHistoryPage = p; _applyComposeHistoryFilter(); },
+        document.getElementById('composeHistoryInfo'),
+        '条记录'
+    );
+}
+
+function _renderComposeHistoryPage(records, total, hasFilter) {
+    const container = document.getElementById('composeHistoryContainer');
+    if (!records.length) {
+        container.innerHTML = hasFilter
+            ? '<div class="empty-state"><h3>未找到匹配记录</h3><p>尝试修改搜索条件</p></div>'
+            : '<div class="empty-state"><h3>暂无撰写记录</h3><p>生成邮件后自动保存在这里</p></div>';
+        return;
+    }
+    const typeIcons = { '开发信':'🚀','跟进邮件':'🔄','产品推荐':'🎯','报价跟进':'💰','节后跟进':'🎉','自定义':'✏️' };
+    container.innerHTML = records.map(r => {
+        const icon = typeIcons[r.email_type] || '✉️';
+        const lines = (r.reply_en || '').split('\n');
+        let subject = '', bodyLines = [];
+        for (const line of lines) {
+            if (!subject && line.trim().toLowerCase().startsWith('subject:')) subject = line.trim().replace(/^subject:\s*/i, '');
+            else if (line.trim()) bodyLines.push(line.trim());
+        }
+        const bodyPreview = bodyLines.join(' ').substring(0, 100);
+        const customerTag = r.customer_name ? `<span class="tag tag-customer">👤 ${escapeHtml(r.customer_name)}</span>` : '';
+        return `<div class="compose-history-card" id="compose-card-${r.id}">
+            <div class="compose-history-header">
+                <div class="compose-history-meta">
+                    <span class="compose-history-type">${icon} ${r.email_type}</span>
+                    <span class="tag tag-tone">${r.tone}</span>
+                    ${customerTag}
+                    <span class="cell-time">${fmtTime(r.created_at)}</span>
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-small btn-view" onclick="toggleComposeDetail(${r.id}, this)">查看</button>
+                    <button class="btn btn-small btn-danger" onclick="deleteComposeHistory(${r.id})">删除</button>
+                </div>
+            </div>
+            ${subject ? `<div class="compose-history-subject">📌 ${escapeHtml(subject)}</div>` : ''}
+            ${r.target_info ? `<div class="compose-history-target">要求：${escapeHtml(r.target_info.substring(0, 80))}${r.target_info.length > 80 ? '…' : ''}</div>` : ''}
+            <div class="compose-history-preview">${escapeHtml(bodyPreview)}${bodyPreview ? '…' : ''}</div>
+            <div class="compose-history-detail" id="compose-detail-${r.id}" style="display:none;">
+                <div class="compose-detail-tabs">
+                    <button class="compose-result-tab-btn active" onclick="switchComposeDetailLang(${r.id},'en',this)">✉️ 英文邮件</button>
+                    <button class="compose-result-tab-btn" onclick="switchComposeDetailLang(${r.id},'zh',this)">📝 中文对照</button>
+                </div>
+                <div class="result-content" id="compose-detail-content-${r.id}" style="margin-top:10px;white-space:pre-wrap;">${r.reply_en}</div>
+                <div class="form-actions" style="margin-top:10px;">
+                    <button class="btn btn-secondary btn-small" onclick="copyComposeHistory(${r.id})">复制</button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
         const res = await fetch(`${API_BASE}/api/compose/history?${params}`, { credentials: 'include' });
         const records = await res.json();
 
@@ -1532,40 +1686,70 @@ document.getElementById('composeTemplateForm').addEventListener('submit', async 
 // 加载撰写模板列表（管理页）
 const TYPE_ICONS = { '开发信':'🚀','跟进邮件':'🔄','产品推荐':'🎯','报价跟进':'💰','节后跟进':'🎉','自定义':'✏️' };
 
+let _composeTemplatesAllData = [];
+let _composeTemplatesPage = 1;
+const _COMPOSE_TEMPLATES_PAGE_SIZE = 10;
+
+function _applyComposeTemplatesFilter() {
+    const q = document.getElementById('composeTemplatesSearch').value.trim().toLowerCase();
+    const filtered = q
+        ? _composeTemplatesAllData.filter(t =>
+            (t.name || '').toLowerCase().includes(q) ||
+            (t.email_type || '').toLowerCase().includes(q) ||
+            (t.tone || '').toLowerCase().includes(q) ||
+            (t.description || '').toLowerCase().includes(q))
+        : _composeTemplatesAllData;
+    renderPaged(filtered, _COMPOSE_TEMPLATES_PAGE_SIZE, _composeTemplatesPage,
+        _renderComposeTemplatesSlice,
+        document.getElementById('composeTemplatesContainer'),
+        document.getElementById('composeTemplatesPagination'),
+        p => { _composeTemplatesPage = p; _applyComposeTemplatesFilter(); },
+        document.getElementById('composeTemplatesInfo'), '个模板'
+    );
+}
+
+function _renderComposeTemplatesSlice(slice, total) {
+    const container = document.getElementById('composeTemplatesContainer');
+    if (!total) {
+        container.innerHTML = '<div class="empty-state"><h3>暂无撰写模板</h3><p>点击「添加撰写模板」创建第一个模板</p></div>';
+        return;
+    }
+    container.innerHTML = slice.map(t => `
+        <div class="template-card">
+            <div class="template-card-header">
+                <div>
+                    <h3>${TYPE_ICONS[t.email_type] || '✉️'} ${escapeHtml(t.name)}</h3>
+                    <div class="template-meta">
+                        <span class="meta-item">${escapeHtml(t.email_type)}</span>
+                        <span class="meta-item">${escapeHtml(t.tone)}</span>
+                    </div>
+                    ${t.description ? `<p style="font-size:0.85rem;color:var(--gray-500);margin-top:6px;">${escapeHtml(t.description)}</p>` : ''}
+                    ${t.fixed_requirements ? `
+                    <div style="margin-top:8px;padding:8px 12px;background:var(--primary-light);border-radius:6px;font-size:0.82rem;color:var(--primary);white-space:pre-wrap;">${escapeHtml(t.fixed_requirements)}</div>
+                    ` : ''}
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-small btn-danger" onclick="deleteComposeTemplate(${t.id})">删除</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
 async function loadComposeTemplates() {
     const container = document.getElementById('composeTemplatesContainer');
     container.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
     try {
         const res = await fetch(`${API_BASE}/api/compose/templates`, { credentials: 'include' });
-        const list = await res.json();
-        if (!list.length) {
-            container.innerHTML = '<div class="empty-state"><h3>暂无撰写模板</h3><p>点击「添加撰写模板」创建第一个模板</p></div>';
-            return;
-        }
-        container.innerHTML = list.map(t => `
-            <div class="template-card">
-                <div class="template-card-header">
-                    <div>
-                        <h3>${TYPE_ICONS[t.email_type] || '✉️'} ${t.name}</h3>
-                        <div class="template-meta">
-                            <span class="meta-item">${t.email_type}</span>
-                            <span class="meta-item">${t.tone}</span>
-                        </div>
-                        ${t.description ? `<p style="font-size:0.85rem;color:var(--gray-500);margin-top:6px;">${t.description}</p>` : ''}
-                        ${t.fixed_requirements ? `
-                        <div style="margin-top:8px;padding:8px 12px;background:var(--primary-light);border-radius:6px;font-size:0.82rem;color:var(--primary);white-space:pre-wrap;">${t.fixed_requirements}</div>
-                        ` : ''}
-                    </div>
-                    <div class="card-actions">
-                        <button class="btn btn-small btn-danger" onclick="deleteComposeTemplate(${t.id})">删除</button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+        _composeTemplatesAllData = await res.json();
+        _composeTemplatesPage = 1;
+        _applyComposeTemplatesFilter();
     } catch (e) {
         container.innerHTML = '<div class="empty-state"><p>加载失败</p></div>';
     }
 }
+
+document.getElementById('composeTemplatesSearch').addEventListener('input', () => { _composeTemplatesPage = 1; _applyComposeTemplatesFilter(); });
 
 async function deleteComposeTemplate(id) {
     if (!confirm('确定删除这个撰写模板吗？')) return;
@@ -1698,27 +1882,202 @@ function _renderCustomerCard(c) {
     </div>`;
 }
 
-async function loadCustomers(statusFilter = '') {
+async function loadCustomers() {
     const container = document.getElementById('customersContainer');
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-        const url = statusFilter
-            ? `${API_BASE}/api/customers?status=${encodeURIComponent(statusFilter)}`
-            : `${API_BASE}/api/customers`;
-        const res = await fetch(url, { credentials: 'include' });
-        const customers = await res.json();
-        _customerList = customers;
+        const res = await fetch(`${API_BASE}/api/customers`, { credentials: 'include' });
+        _customerList = await res.json();
         _refreshCustomerSelectors();
-
-        if (!customers.length) {
-            container.innerHTML = '<div class="empty-state"><h3>暂无客户</h3><p>点击「添加客户」创建第一个客户档案</p></div>';
-            return;
-        }
-        container.innerHTML = customers.map(_renderCustomerCard).join('');
+        _buildCountryFilter();
+        _applyCustomerFilters();
     } catch (e) {
         container.innerHTML = '<div class="error-message">加载失败</div>';
     }
 }
+
+// ── 客户筛选 + 分页 ──
+const CUSTOMER_PAGE_SIZE = 10;
+let _customerPage = 1;
+
+function _buildCountryFilter() {
+    const countries = [...new Set(_customerList.map(c => c.country).filter(Boolean))].sort();
+    const sel = document.getElementById('customerCountryFilter');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">全部国家</option>' +
+        countries.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    if (countries.includes(cur)) sel.value = cur;
+}
+
+function _applyCustomerFilters() {
+    const q      = (document.getElementById('customerSearchInput').value || '').trim().toLowerCase();
+    const status = document.getElementById('customerStatusFilter').value;
+    const country= document.getElementById('customerCountryFilter').value;
+
+    let filtered = _customerList.filter(c => {
+        if (status  && c.status  !== status)  return false;
+        if (country && c.country !== country) return false;
+        if (q) {
+            const hay = [c.name, c.company, c.email, c.phone, c.country, c.industry, c.tags]
+                .filter(Boolean).join(' ').toLowerCase();
+            if (!hay.includes(q)) return false;
+        }
+        return true;
+    });
+
+    const total = filtered.length;
+    const pages = Math.max(1, Math.ceil(total / CUSTOMER_PAGE_SIZE));
+    if (_customerPage > pages) _customerPage = pages;
+
+    const info = document.getElementById('customerListInfo');
+    info.textContent = total ? `共 ${total} 位客户` + (q || status || country ? '（已筛选）' : '') : '';
+
+    const start = (_customerPage - 1) * CUSTOMER_PAGE_SIZE;
+    const page  = filtered.slice(start, start + CUSTOMER_PAGE_SIZE);
+
+    const container = document.getElementById('customersContainer');
+    if (!page.length) {
+        container.innerHTML = q || status || country
+            ? '<div class="empty-state"><p>没有符合条件的客户</p></div>'
+            : '<div class="empty-state"><h3>暂无客户</h3><p>点击「添加客户」创建第一个客户档案</p></div>';
+    } else {
+        container.innerHTML = page.map(_renderCustomerCard).join('');
+    }
+
+    _renderCustomerPagination(pages);
+}
+
+function _renderCustomerPagination(pages) {
+    const el = document.getElementById('customerPagination');
+    if (pages <= 1) { el.innerHTML = ''; return; }
+
+    const cur = _customerPage;
+    let html = `<button class="page-btn" ${cur===1?'disabled':''} onclick="_goCustomerPage(${cur-1})">‹</button>`;
+
+    // 显示页码，省略中间过多时用…
+    const range = [];
+    for (let i = 1; i <= pages; i++) {
+        if (i === 1 || i === pages || (i >= cur - 2 && i <= cur + 2)) range.push(i);
+        else if (range[range.length-1] !== '…') range.push('…');
+    }
+    range.forEach(p => {
+        if (p === '…') {
+            html += `<span class="page-btn" style="cursor:default;border:none;">…</span>`;
+        } else {
+            html += `<button class="page-btn${p===cur?' active':''}" onclick="_goCustomerPage(${p})">${p}</button>`;
+        }
+    });
+    html += `<button class="page-btn" ${cur===pages?'disabled':''} onclick="_goCustomerPage(${cur+1})">›</button>`;
+    el.innerHTML = html;
+}
+
+function _goCustomerPage(page) {
+    _customerPage = page;
+    _applyCustomerFilters();
+    document.getElementById('customers').scrollTo({ top: 0 });
+}
+
+// ── 国家 Combobox ──
+const COUNTRIES = [
+    '阿富汗','阿尔巴尼亚','阿尔及利亚','安哥拉','阿根廷','亚美尼亚','澳大利亚','奥地利','阿塞拜疆',
+    '巴哈马','巴林','孟加拉国','白俄罗斯','比利时','贝宁','玻利维亚','波黑','巴西','保加利亚','布基纳法索',
+    '柬埔寨','喀麦隆','加拿大','智利','中国','哥伦比亚','刚果','哥斯达黎加','克罗地亚','古巴','塞浦路斯','捷克',
+    '丹麦','多米尼加共和国','厄瓜多尔','埃及','萨尔瓦多','埃塞俄比亚',
+    '芬兰','法国','加纳','德国','加纳','希腊','危地马拉','几内亚',
+    '海地','洪都拉斯','匈牙利','印度','印度尼西亚','伊朗','伊拉克','爱尔兰','以色列','意大利',
+    '牙买加','日本','约旦','哈萨克斯坦','肯尼亚','科威特','吉尔吉斯斯坦',
+    '老挝','黎巴嫩','利比亚','立陶宛','卢森堡',
+    '马达加斯加','马来西亚','马里','墨西哥','摩洛哥','莫桑比克','缅甸',
+    '纳米比亚','尼泊尔','荷兰','新西兰','尼加拉瓜','尼日利亚','挪威',
+    '阿曼','巴基斯坦','巴勒斯坦','巴拿马','巴拉圭','秘鲁','菲律宾','波兰','葡萄牙',
+    '卡塔尔','罗马尼亚','俄罗斯','卢旺达',
+    '沙特阿拉伯','塞内加尔','塞尔维亚','新加坡','斯洛伐克','索马里','南非','西班牙','斯里兰卡','苏丹','瑞典','瑞士','叙利亚',
+    '台湾','坦桑尼亚','泰国','突尼斯','土耳其',
+    '乌干达','乌克兰','阿联酋','英国','美国','乌拉圭','乌兹别克斯坦',
+    '委内瑞拉','越南','也门','赞比亚','津巴布韦',
+    // English names for international use
+    'Afghanistan','Albania','Algeria','Angola','Argentina','Armenia','Australia','Austria','Azerbaijan',
+    'Bahrain','Bangladesh','Belgium','Bolivia','Bosnia','Brazil','Bulgaria',
+    'Cambodia','Cameroon','Canada','Chile','China','Colombia','Congo','Costa Rica','Croatia','Cuba','Cyprus','Czech Republic',
+    'Denmark','Dominican Republic','Ecuador','Egypt','El Salvador','Ethiopia',
+    'Finland','France','Germany','Ghana','Greece','Guatemala',
+    'Haiti','Honduras','Hungary','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy',
+    'Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kuwait','Kyrgyzstan',
+    'Laos','Lebanon','Libya','Lithuania','Luxembourg',
+    'Madagascar','Malaysia','Mali','Mexico','Morocco','Mozambique','Myanmar',
+    'Namibia','Nepal','Netherlands','New Zealand','Nicaragua','Nigeria','Norway',
+    'Oman','Pakistan','Palestine','Panama','Paraguay','Peru','Philippines','Poland','Portugal',
+    'Qatar','Romania','Russia','Rwanda',
+    'Saudi Arabia','Senegal','Serbia','Singapore','Slovakia','Somalia','South Africa','Spain','Sri Lanka','Sudan','Sweden','Switzerland','Syria',
+    'Taiwan','Tanzania','Thailand','Tunisia','Turkey',
+    'Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan',
+    'Venezuela','Vietnam','Yemen','Zambia','Zimbabwe',
+];
+
+function _initCountryCombobox() {
+    const input    = document.getElementById('customerCountryInput');
+    const dropdown = document.getElementById('customerCountryDropdown');
+    if (!input) return;
+
+    function show(list) {
+        if (!list.length) {
+            dropdown.innerHTML = `<div class="country-option-empty">无匹配结果（可直接输入）</div>`;
+        } else {
+            dropdown.innerHTML = list.slice(0, 60).map(c =>
+                `<div class="country-option" onmousedown="event.preventDefault();_pickCountry('${escapeHtml(c)}')">${escapeHtml(c)}</div>`
+            ).join('');
+        }
+        dropdown.classList.add('open');
+    }
+
+    input.addEventListener('focus', () => {
+        const q = input.value.trim().toLowerCase();
+        show(q ? COUNTRIES.filter(c => c.toLowerCase().includes(q)) : COUNTRIES);
+    });
+
+    input.addEventListener('input', () => {
+        const q = input.value.trim().toLowerCase();
+        show(q ? COUNTRIES.filter(c => c.toLowerCase().includes(q)) : COUNTRIES);
+    });
+
+    input.addEventListener('blur', () => {
+        setTimeout(() => dropdown.classList.remove('open'), 150);
+    });
+
+    input.addEventListener('keydown', e => {
+        const items = dropdown.querySelectorAll('.country-option');
+        const active = dropdown.querySelector('.country-option.active');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const next = active ? active.nextElementSibling : items[0];
+            if (next && next.classList.contains('country-option')) {
+                active?.classList.remove('active');
+                next.classList.add('active');
+                next.scrollIntoView({ block: 'nearest' });
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prev = active?.previousElementSibling;
+            if (prev && prev.classList.contains('country-option')) {
+                active.classList.remove('active');
+                prev.classList.add('active');
+                prev.scrollIntoView({ block: 'nearest' });
+            }
+        } else if (e.key === 'Enter' && active) {
+            e.preventDefault();
+            _pickCountry(active.textContent.trim());
+        } else if (e.key === 'Escape') {
+            dropdown.classList.remove('open');
+        }
+    });
+}
+
+function _pickCountry(name) {
+    document.getElementById('customerCountryInput').value = name;
+    document.getElementById('customerCountryDropdown').classList.remove('open');
+}
+
+_initCountryCombobox();
 
 function _refreshCustomerSelectors() {
     if (!Array.isArray(_customerList)) return;
@@ -1756,7 +2115,7 @@ async function saveCustomer(e) {
         company:      document.getElementById('customerCompany').value.trim()      || null,
         email:        document.getElementById('customerEmail').value.trim()         || null,
         phone:        document.getElementById('customerPhone').value.trim()         || null,
-        country:      document.getElementById('customerCountry').value.trim()      || null,
+        country:      document.getElementById('customerCountryInput').value.trim()  || null,
         status:       document.getElementById('customerStatus').value,
         industry:     document.getElementById('customerIndustry').value.trim()    || null,
         product_pref: document.getElementById('customerProductPref').value.trim() || null,
@@ -1781,7 +2140,7 @@ async function saveCustomer(e) {
         document.getElementById('customerForm').reset();
         document.getElementById('customerFormId').value = '';
         showSuccess(isEdit ? '客户信息已更新' : '客户已创建');
-        loadCustomers(document.getElementById('customerStatusFilter').value);
+        loadCustomers();
     } catch (err) {
         showError(err.message);
     }
@@ -1793,7 +2152,7 @@ async function deleteCustomer(id) {
         const res = await fetch(`${API_BASE}/api/customers/${id}`, { method: 'DELETE', credentials: 'include' });
         if (!res.ok) throw new Error('删除失败');
         showSuccess('客户已删除');
-        loadCustomers(document.getElementById('customerStatusFilter').value);
+        loadCustomers();
     } catch (e) {
         showError('删除失败');
     }
@@ -1808,7 +2167,7 @@ function openEditCustomer(id) {
     document.getElementById('customerCompany').value      = c.company       || '';
     document.getElementById('customerEmail').value        = c.email         || '';
     document.getElementById('customerPhone').value        = c.phone         || '';
-    document.getElementById('customerCountry').value      = c.country       || '';
+    document.getElementById('customerCountryInput').value = c.country || '';
     document.getElementById('customerStatus').value       = c.status        || 'prospect';
     document.getElementById('customerIndustry').value     = c.industry      || '';
     document.getElementById('customerProductPref').value  = c.product_pref  || '';
@@ -1893,6 +2252,7 @@ document.getElementById('addCustomerBtn').addEventListener('click', () => {
     document.getElementById('customerModalTitle').textContent = '添加客户';
     document.getElementById('customerFormId').value = '';
     document.getElementById('customerForm').reset();
+    document.getElementById('customerCountryInput').value = '';
     document.getElementById('customerModal').classList.add('show');
 });
 document.getElementById('cancelCustomerBtn').addEventListener('click', () => {
@@ -1906,8 +2266,14 @@ document.getElementById('customerDetailClose').addEventListener('click', () => {
 });
 document.getElementById('customerForm').addEventListener('submit', saveCustomer);
 
-document.getElementById('customerStatusFilter').addEventListener('change', function() {
-    loadCustomers(this.value);
+document.getElementById('customerStatusFilter').addEventListener('change', () => {
+    _customerPage = 1; _applyCustomerFilters();
+});
+document.getElementById('customerCountryFilter').addEventListener('change', () => {
+    _customerPage = 1; _applyCustomerFilters();
+});
+document.getElementById('customerSearchInput').addEventListener('input', () => {
+    _customerPage = 1; _applyCustomerFilters();
 });
 
 // ===== CSV Import =====
@@ -1963,7 +2329,7 @@ document.getElementById('customerStatusFilter').addEventListener('change', funct
                     ${errHtml}
                 </div>`;
                 if (data.imported > 0) {
-                    loadCustomers(document.getElementById('customerStatusFilter').value);
+                    loadCustomers();
                 }
             }
         } catch (e) {
@@ -2163,37 +2529,36 @@ document.getElementById('resetPasswordSubmit').addEventListener('click', async (
 
 // ───── 收件箱 ─────
 let _inboxCache = [];
+let _inboxPage = 1;
+const _INBOX_PAGE_SIZE = 20;
 
 document.getElementById('refreshInboxBtn').addEventListener('click', loadInbox);
 
-async function loadInbox() {
-    const container = document.getElementById('inboxContainer');
-    const statusEl = document.getElementById('inboxStatus');
-    container.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在读取邮件...</p></div>';
-    statusEl.textContent = '';
-    try {
-        const res = await fetch('/api/email-center/inbox?limit=50', { credentials: 'include' });
-        if (!res.ok) {
-            const err = await res.json();
-            container.innerHTML = `<div class="error-message">${err.detail || '加载失败'}</div>`;
-            return;
-        }
-        const emails = await res.json();
-        _inboxCache = emails;
-        statusEl.textContent = `共 ${emails.length} 封`;
-        renderInbox(emails);
-    } catch (e) {
-        container.innerHTML = `<div class="error-message">加载失败：${e.message}</div>`;
-    }
+function _applyInboxFilter() {
+    const q = document.getElementById('inboxSearch').value.trim().toLowerCase();
+    const filtered = q
+        ? _inboxCache.filter(m =>
+            (m.from_name || '').toLowerCase().includes(q) ||
+            (m.from_address || '').toLowerCase().includes(q) ||
+            (m.subject || '').toLowerCase().includes(q) ||
+            (m.preview || '').toLowerCase().includes(q))
+        : _inboxCache;
+    renderPaged(filtered, _INBOX_PAGE_SIZE, _inboxPage,
+        _renderInboxSlice,
+        document.getElementById('inboxContainer'),
+        document.getElementById('inboxPagination'),
+        p => { _inboxPage = p; _applyInboxFilter(); },
+        document.getElementById('inboxInfo'), '封邮件'
+    );
 }
 
-function renderInbox(emails) {
+function _renderInboxSlice(slice, total) {
     const container = document.getElementById('inboxContainer');
-    if (!emails.length) {
+    if (!total) {
         container.innerHTML = '<div class="empty-state"><h3>收件箱为空</h3><p>暂无邮件</p></div>';
         return;
     }
-    const rows = emails.map(m => `
+    const rows = slice.map(m => `
         <tr class="${m.is_read ? '' : 'inbox-unread'}" style="cursor:pointer;" onclick="openInboxEmail('${m.id}')">
             <td class="cell-time">${m.is_read ? '' : '<span class="unread-dot"></span>'}</td>
             <td><div class="cell-title">${escapeHtml(m.from_name || m.from_address)}</div>
@@ -2214,6 +2579,34 @@ function renderInbox(emails) {
             <tbody>${rows}</tbody>
         </table>`;
 }
+
+async function loadInbox() {
+    const container = document.getElementById('inboxContainer');
+    const statusEl = document.getElementById('inboxStatus');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在读取邮件...</p></div>';
+    statusEl.textContent = '';
+    try {
+        const res = await fetch('/api/email-center/inbox?limit=50', { credentials: 'include' });
+        if (!res.ok) {
+            const err = await res.json();
+            container.innerHTML = `<div class="error-message">${err.detail || '加载失败'}</div>`;
+            return;
+        }
+        _inboxCache = await res.json();
+        _inboxPage = 1;
+        _applyInboxFilter();
+    } catch (e) {
+        container.innerHTML = `<div class="error-message">加载失败：${e.message}</div>`;
+    }
+}
+
+function renderInbox(emails) {
+    _inboxCache = emails;
+    _inboxPage = 1;
+    _applyInboxFilter();
+}
+
+document.getElementById('inboxSearch').addEventListener('input', () => { _inboxPage = 1; _applyInboxFilter(); });
 
 function openInboxEmail(emailId) {
     const m = _inboxCache.find(x => x.id === emailId);
@@ -2753,127 +3146,182 @@ document.getElementById('sendBulkBtn').addEventListener('click', async () => {
 
 
 // ───── 发送记录 ─────
+let _sentLogAllData = [];
+let _sentLogPage = 1;
+const _SENT_LOG_PAGE_SIZE = 20;
+
 document.getElementById('refreshSentLogBtn').addEventListener('click', loadSentLog);
+
+function _applySentLogFilter() {
+    const q = document.getElementById('sentLogSearch').value.trim().toLowerCase();
+    const statusVal = document.getElementById('sentLogStatusFilter').value;
+    let filtered = _sentLogAllData;
+    if (q) filtered = filtered.filter(r =>
+        (r.to_address || '').toLowerCase().includes(q) ||
+        (r.customer_name || '').toLowerCase().includes(q) ||
+        (r.subject || '').toLowerCase().includes(q));
+    if (statusVal) filtered = filtered.filter(r => r.status === statusVal);
+    renderPaged(filtered, _SENT_LOG_PAGE_SIZE, _sentLogPage,
+        _renderSentLogSlice,
+        document.getElementById('sentLogContainer'),
+        document.getElementById('sentLogPagination'),
+        p => { _sentLogPage = p; _applySentLogFilter(); },
+        document.getElementById('sentLogInfo'), '条记录'
+    );
+}
+
+function _renderSentLogSlice(slice, total) {
+    const container = document.getElementById('sentLogContainer');
+    if (!total) {
+        container.innerHTML = '<div class="empty-state"><h3>暂无发送记录</h3></div>';
+        return;
+    }
+    const rows = slice.map(r => `
+        <tr>
+            <td class="cell-time">${fmtTime(r.created_at)}</td>
+            <td>${escapeHtml(r.to_address)}</td>
+            <td>${escapeHtml(r.customer_name || '—')}</td>
+            <td><div class="cell-title">${escapeHtml(r.subject)}</div></td>
+            <td><span class="status-badge ${r.status === 'sent' ? 'status-done' : 'status-pending'}">${r.status === 'sent' ? '✅ 成功' : '❌ 失败'}</span>
+                ${r.error_msg ? `<div style="font-size:0.78rem;color:var(--danger);">${escapeHtml(r.error_msg.substring(0, 60))}</div>` : ''}
+            </td>
+            <td class="cell-time">${r.bulk_id ? `批次 ${r.bulk_id}` : '单发'}</td>
+        </tr>
+    `).join('');
+    container.innerHTML = `
+        <table class="history-table">
+            <thead><tr>
+                <th>时间</th><th>收件人</th><th>客户</th><th>主题</th><th>状态</th><th>类型</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+}
 
 async function loadSentLog() {
     const container = document.getElementById('sentLogContainer');
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
         const res = await fetch('/api/email-center/sent-log', { credentials: 'include' });
-        const records = await res.json();
-        if (!records.length) {
-            container.innerHTML = '<div class="empty-state"><h3>暂无发送记录</h3></div>';
-            return;
-        }
-        const rows = records.map(r => `
-            <tr>
-                <td class="cell-time">${fmtTime(r.created_at)}</td>
-                <td>${escapeHtml(r.to_address)}</td>
-                <td>${escapeHtml(r.customer_name || '—')}</td>
-                <td><div class="cell-title">${escapeHtml(r.subject)}</div></td>
-                <td><span class="status-badge ${r.status === 'sent' ? 'status-done' : 'status-pending'}">${r.status === 'sent' ? '✅ 成功' : '❌ 失败'}</span>
-                    ${r.error_msg ? `<div style="font-size:0.78rem;color:var(--danger);">${escapeHtml(r.error_msg.substring(0, 60))}</div>` : ''}
-                </td>
-                <td class="cell-time">${r.bulk_id ? `批次 ${r.bulk_id}` : '单发'}</td>
-            </tr>
-        `).join('');
-        container.innerHTML = `
-            <table class="history-table">
-                <thead><tr>
-                    <th>时间</th><th>收件人</th><th>客户</th><th>主题</th><th>状态</th><th>类型</th>
-                </tr></thead>
-                <tbody>${rows}</tbody>
-            </table>`;
+        _sentLogAllData = await res.json();
+        _sentLogPage = 1;
+        _applySentLogFilter();
     } catch (e) {
         container.innerHTML = `<div class="error-message">加载失败：${e.message}</div>`;
     }
 }
 
+document.getElementById('sentLogSearch').addEventListener('input', () => { _sentLogPage = 1; _applySentLogFilter(); });
+document.getElementById('sentLogStatusFilter').addEventListener('change', () => { _sentLogPage = 1; _applySentLogFilter(); });
+
 
 // ───── 联系统计 ─────
+let _contactStatsAllData = [];
+let _contactStatsPage = 1;
+const _CONTACT_STATS_PAGE_SIZE = 20;
+
 document.getElementById('refreshContactStatsBtn').addEventListener('click', loadContactStats);
-document.getElementById('contactOverdueDays').addEventListener('change', loadContactStats);
+document.getElementById('contactOverdueDays').addEventListener('change', () => { _contactStatsPage = 1; _applyContactStatsFilter(); });
+
+function _applyContactStatsFilter() {
+    const overdueDays = Math.max(1, parseInt(document.getElementById('contactOverdueDays').value) || 30);
+    const q = document.getElementById('contactStatsSearch').value.trim().toLowerCase();
+    const summary = document.getElementById('contactStatsSummary');
+
+    // summary banner uses full dataset
+    const overdueList  = _contactStatsAllData.filter(s => s.days_since_contact !== null && s.days_since_contact >= overdueDays);
+    const neverList    = _contactStatsAllData.filter(s => s.days_since_contact === null);
+    const needFollowUp = overdueList.length + neverList.length;
+    summary.innerHTML = needFollowUp > 0 ? `
+        <div class="contact-alert-banner">
+            <span class="contact-alert-icon">⚠️</span>
+            <span>共 <strong>${needFollowUp}</strong> 位客户需要跟进：
+                ${overdueList.length ? `<strong>${overdueList.length}</strong> 位超过 ${overdueDays} 天未联系` : ''}
+                ${overdueList.length && neverList.length ? '，' : ''}
+                ${neverList.length ? `<strong>${neverList.length}</strong> 位从未联系` : ''}
+            </span>
+        </div>` : '';
+
+    let filtered = _contactStatsAllData;
+    if (q) filtered = filtered.filter(s =>
+        (s.customer_name || '').toLowerCase().includes(q) ||
+        (s.company || '').toLowerCase().includes(q) ||
+        (s.email || '').toLowerCase().includes(q));
+
+    renderPaged(filtered, _CONTACT_STATS_PAGE_SIZE, _contactStatsPage,
+        slice => _renderContactStatsSlice(slice, filtered.length, overdueDays),
+        document.getElementById('contactStatsContainer'),
+        document.getElementById('contactStatsPagination'),
+        p => { _contactStatsPage = p; _applyContactStatsFilter(); },
+        document.getElementById('contactStatsInfo'), '位客户'
+    );
+}
+
+function _renderContactStatsSlice(slice, total, overdueDays) {
+    const container = document.getElementById('contactStatsContainer');
+    if (!total) {
+        container.innerHTML = '<div class="empty-state"><h3>暂无客户数据</h3><p>先在「客户管理」添加客户</p></div>';
+        return;
+    }
+    const halfDays = Math.floor(overdueDays / 2);
+    const rows = slice.map(s => {
+        const isOverdue = s.days_since_contact !== null && s.days_since_contact >= overdueDays;
+        const isNever   = s.days_since_contact === null;
+        const daysClass = isNever    ? 'contact-never'
+                        : isOverdue  ? 'contact-overdue'
+                        : s.days_since_contact > halfDays ? 'contact-warning'
+                        : 'contact-ok';
+        const rowClass  = isOverdue || isNever ? 'contact-row-alert' : '';
+        const daysLabel = isNever                       ? '从未联系'
+                        : s.days_since_contact === 0    ? '今天'
+                        : `${s.days_since_contact} 天前`;
+        const stLabel = { prospect: '潜在', active: '活跃', paused: '暂停', closed: '关闭' }[s.status] || s.status;
+        return `
+            <tr class="${rowClass}">
+                <td><div class="cell-title">${escapeHtml(s.customer_name)}</div>
+                    <div style="font-size:0.8rem;color:var(--gray-400);">${escapeHtml(s.company || '')}</div></td>
+                <td><span class="customer-status-badge customer-status-${s.status}">${stLabel}</span></td>
+                <td>${escapeHtml(s.email || '—')}</td>
+                <td style="text-align:center;">${s.total_interactions}</td>
+                <td style="text-align:center;">${s.sent_count}</td>
+                <td class="${daysClass}" style="font-weight:600;">${daysLabel}</td>
+                <td class="cell-time">${s.last_contact || '—'}</td>
+            </tr>`;
+    }).join('');
+    container.innerHTML = `
+        <div class="contact-stats-legend">
+            <span class="contact-ok-swatch">■</span> ${halfDays}天内 &nbsp;
+            <span class="contact-warning-swatch">■</span> ${halfDays+1}–${overdueDays-1}天 &nbsp;
+            <span class="contact-overdue-swatch">■</span> 超过${overdueDays}天 &nbsp;
+            <span class="contact-never-swatch">■</span> 从未联系
+        </div>
+        <table class="history-table">
+            <thead><tr>
+                <th>客户</th><th>状态</th><th>邮箱</th>
+                <th style="text-align:center;">互动总数</th>
+                <th style="text-align:center;">已发邮件</th>
+                <th>上次联系距今</th>
+                <th>最近联系日期</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+}
 
 async function loadContactStats() {
     const container = document.getElementById('contactStatsContainer');
     const summary   = document.getElementById('contactStatsSummary');
-    const overdueDaysInput = document.getElementById('contactOverdueDays');
-    const overdueDays = Math.max(1, parseInt(overdueDaysInput.value) || 30);
-
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     summary.innerHTML = '';
     try {
         const res = await fetch('/api/email-center/contact-stats', { credentials: 'include' });
-        const stats = await res.json();
-        if (!stats.length) {
-            container.innerHTML = '<div class="empty-state"><h3>暂无客户数据</h3><p>先在「客户管理」添加客户</p></div>';
-            return;
-        }
-
-        // 分类计数
-        const overdueList  = stats.filter(s => s.days_since_contact !== null && s.days_since_contact >= overdueDays);
-        const neverList    = stats.filter(s => s.days_since_contact === null);
-        const needFollowUp = overdueList.length + neverList.length;
-
-        if (needFollowUp > 0) {
-            summary.innerHTML = `
-                <div class="contact-alert-banner">
-                    <span class="contact-alert-icon">⚠️</span>
-                    <span>共 <strong>${needFollowUp}</strong> 位客户需要跟进：
-                        ${overdueList.length ? `<strong>${overdueList.length}</strong> 位超过 ${overdueDays} 天未联系` : ''}
-                        ${overdueList.length && neverList.length ? '，' : ''}
-                        ${neverList.length ? `<strong>${neverList.length}</strong> 位从未联系` : ''}
-                    </span>
-                </div>`;
-        }
-
-        const rows = stats.map(s => {
-            const isOverdue = s.days_since_contact !== null && s.days_since_contact >= overdueDays;
-            const isNever   = s.days_since_contact === null;
-            const daysClass = isNever    ? 'contact-never'
-                            : isOverdue  ? 'contact-overdue'
-                            : s.days_since_contact > Math.floor(overdueDays / 2) ? 'contact-warning'
-                            : 'contact-ok';
-            const rowClass  = isOverdue || isNever ? 'contact-row-alert' : '';
-            const daysLabel = isNever                       ? '从未联系'
-                            : s.days_since_contact === 0    ? '今天'
-                            : `${s.days_since_contact} 天前`;
-            const stLabel = { prospect: '潜在', active: '活跃', paused: '暂停', closed: '关闭' }[s.status] || s.status;
-            return `
-                <tr class="${rowClass}">
-                    <td><div class="cell-title">${escapeHtml(s.customer_name)}</div>
-                        <div style="font-size:0.8rem;color:var(--gray-400);">${escapeHtml(s.company || '')}</div></td>
-                    <td><span class="customer-status-badge customer-status-${s.status}">${stLabel}</span></td>
-                    <td>${escapeHtml(s.email || '—')}</td>
-                    <td style="text-align:center;">${s.total_interactions}</td>
-                    <td style="text-align:center;">${s.sent_count}</td>
-                    <td class="${daysClass}" style="font-weight:600;">${daysLabel}</td>
-                    <td class="cell-time">${s.last_contact || '—'}</td>
-                </tr>`;
-        }).join('');
-
-        const halfDays = Math.floor(overdueDays / 2);
-        container.innerHTML = `
-            <div class="contact-stats-legend">
-                <span class="contact-ok-swatch">■</span> ${halfDays}天内 &nbsp;
-                <span class="contact-warning-swatch">■</span> ${halfDays+1}–${overdueDays-1}天 &nbsp;
-                <span class="contact-overdue-swatch">■</span> 超过${overdueDays}天 &nbsp;
-                <span class="contact-never-swatch">■</span> 从未联系
-            </div>
-            <table class="history-table">
-                <thead><tr>
-                    <th>客户</th><th>状态</th><th>邮箱</th>
-                    <th style="text-align:center;">互动总数</th>
-                    <th style="text-align:center;">已发邮件</th>
-                    <th>上次联系距今</th>
-                    <th>最近联系日期</th>
-                </tr></thead>
-                <tbody>${rows}</tbody>
-            </table>`;
+        _contactStatsAllData = await res.json();
+        _contactStatsPage = 1;
+        _applyContactStatsFilter();
     } catch (e) {
         container.innerHTML = `<div class="error-message">加载失败：${e.message}</div>`;
     }
 }
+
+document.getElementById('contactStatsSearch').addEventListener('input', () => { _contactStatsPage = 1; _applyContactStatsFilter(); });
 
 
 // ───── 邮件模板 ─────
@@ -2914,41 +3362,70 @@ function closeEmailTemplateModal() {
     _editingEmailTemplateId = null;
 }
 
+let _emailTemplatesAllData = [];
+let _emailTemplatesPage = 1;
+const _EMAIL_TEMPLATES_PAGE_SIZE = 10;
+
+function _applyEmailTemplatesFilter() {
+    const q = document.getElementById('emailTemplatesSearch').value.trim().toLowerCase();
+    const filtered = q
+        ? _emailTemplatesAllData.filter(t =>
+            (t.name || '').toLowerCase().includes(q) ||
+            (t.subject || '').toLowerCase().includes(q) ||
+            (t.description || '').toLowerCase().includes(q))
+        : _emailTemplatesAllData;
+    renderPaged(filtered, _EMAIL_TEMPLATES_PAGE_SIZE, _emailTemplatesPage,
+        _renderEmailTemplatesSlice,
+        document.getElementById('emailTemplateList'),
+        document.getElementById('emailTemplatesPagination'),
+        p => { _emailTemplatesPage = p; _applyEmailTemplatesFilter(); },
+        document.getElementById('emailTemplatesInfo'), '个模板'
+    );
+}
+
+function _renderEmailTemplatesSlice(slice, total) {
+    const list = document.getElementById('emailTemplateList');
+    if (!total) {
+        list.innerHTML = '<div class="empty-state"><h3>暂无邮件模板</h3><p>点击「新建模板」创建第一个吧</p></div>';
+        return;
+    }
+    list.innerHTML = `
+        <table class="history-table">
+            <thead><tr>
+                <th>名称</th><th>备注</th><th>主题</th><th>创建时间</th><th>操作</th>
+            </tr></thead>
+            <tbody>
+                ${slice.map(t => `
+                    <tr>
+                        <td><div class="cell-title">${escapeHtml(t.name)}</div></td>
+                        <td style="color:var(--gray-400);font-size:0.85rem;">${escapeHtml(t.description || '—')}</td>
+                        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(t.subject)}</td>
+                        <td class="cell-time">${t.created_at ? t.created_at.slice(0,10) : ''}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-sm btn-secondary" onclick="editEmailTemplate(${t.id})">编辑</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteEmailTemplate(${t.id})">删除</button>
+                            </div>
+                        </td>
+                    </tr>`).join('')}
+            </tbody>
+        </table>`;
+}
+
 async function loadEmailTemplates() {
     const list = document.getElementById('emailTemplateList');
     list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
         const res = await fetch('/api/email-templates', { credentials: 'include' });
-        const templates = await res.json();
-        if (!templates.length) {
-            list.innerHTML = '<div class="empty-state"><h3>暂无邮件模板</h3><p>点击「新建模板」创建第一个吧</p></div>';
-            return;
-        }
-        list.innerHTML = `
-            <table class="history-table">
-                <thead><tr>
-                    <th>名称</th><th>备注</th><th>主题</th><th>创建时间</th><th>操作</th>
-                </tr></thead>
-                <tbody>
-                    ${templates.map(t => `
-                        <tr>
-                            <td><div class="cell-title">${escapeHtml(t.name)}</div></td>
-                            <td style="color:var(--gray-400);font-size:0.85rem;">${escapeHtml(t.description || '—')}</td>
-                            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(t.subject)}</td>
-                            <td class="cell-time">${t.created_at ? t.created_at.slice(0,10) : ''}</td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm btn-secondary" onclick="editEmailTemplate(${t.id})">编辑</button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteEmailTemplate(${t.id})">删除</button>
-                                </div>
-                            </td>
-                        </tr>`).join('')}
-                </tbody>
-            </table>`;
+        _emailTemplatesAllData = await res.json();
+        _emailTemplatesPage = 1;
+        _applyEmailTemplatesFilter();
     } catch (e) {
         list.innerHTML = `<div class="error-message">加载失败：${e.message}</div>`;
     }
 }
+
+document.getElementById('emailTemplatesSearch').addEventListener('input', () => { _emailTemplatesPage = 1; _applyEmailTemplatesFilter(); });
 
 async function saveEmailTemplate() {
     const name = document.getElementById('etName').value.trim();

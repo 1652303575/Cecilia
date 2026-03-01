@@ -1681,6 +1681,129 @@ textarea::placeholder {
     }
 }
 
+/* ===== Customer Toolbar ===== */
+.customer-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.customer-toolbar-left {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.customer-toolbar-filters {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.customer-search-input {
+    flex: 1;
+    min-width: 180px;
+}
+
+.customer-list-info {
+    font-size: 0.82rem;
+    color: var(--gray-400);
+    margin-bottom: 10px;
+}
+
+/* ===== Country Combobox ===== */
+.country-combobox {
+    position: relative;
+}
+
+.country-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 200;
+}
+
+.country-dropdown.open {
+    display: block;
+}
+
+.country-option {
+    padding: 8px 14px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    color: var(--gray-700);
+    transition: background 0.1s;
+}
+
+.country-option:hover,
+.country-option.active {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.country-option-empty {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: var(--gray-400);
+    text-align: center;
+}
+
+/* ===== Customer Pagination ===== */
+.customer-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 20px;
+    padding-bottom: 8px;
+}
+
+.page-btn {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius);
+    background: white;
+    color: var(--gray-600);
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.page-btn:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+}
+
+.page-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 /* ===== Customer Cards ===== */
 .customer-card {
     background: #f0f7ff;
