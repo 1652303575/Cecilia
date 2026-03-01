@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👑 Cecilia Auto Mail</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- ===== 登录页 ===== -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-crown">👑</div>
+            <h1 class="login-title">Cecilia Auto Mail</h1>
+            <p class="login-sub">外贸邮件助手</p>
+            <form id="loginForm" class="login-form" action="#" method="post">
+                <div class="form-group">
+                    <label for="loginUsername">用户名</label>
+                    <input type="text" id="loginUsername" name="username" placeholder="请输入用户名" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">密码</label>
+                    <input type="password" id="loginPassword" name="password" placeholder="请输入密码" autocomplete="current-password" required>
+                </div>
+                <div id="loginError" class="login-error" style="display:none;"></div>
+                <button type="submit" class="btn btn-primary login-btn" id="loginBtn">登 录</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="app-layout" id="appLayout" style="display:none;">
+
+        <!-- ===== 左侧菜单 ===== -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-crown">👑</div>
+                <div class="sidebar-brand">
+                    <span class="sidebar-title">Cecilia</span>
+                    <span class="sidebar-sub">Auto Mail</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+
+                <!-- 一级：邮件中心 -->
+                <div class="nav-group">
+                    <div class="nav-group-label">
+                        <span class="nav-group-icon">📮</span> 邮件中心
+                    </div>
+                    <button class="nav-item" data-page="emailInbox">
+                        <span class="nav-item-icon">📥</span> 收件箱
+                    </button>
+                    <button class="nav-item" data-page="emailSend">
+                        <span class="nav-item-icon">📤</span> 发邮件
+                    </button>
+                    <button class="nav-item" data-page="emailBulk">
+                        <span class="nav-item-icon">📨</span> 群发邮件
+                    </button>
+                    <button class="nav-item" data-page="emailSentLog">
+                        <span class="nav-item-icon">📋</span> 发送记录
+                    </button>
+                    <button class="nav-item" data-page="contactStats">
+                        <span class="nav-item-icon">📊</span> 联系统计
+                    </button>
+                    <button class="nav-item" data-page="emailTemplates">
+                        <span class="nav-item-icon">📝</span> 邮件模板
+                    </button>
+                </div>
+
+                <!-- 一级：邮件回复 -->
+                <div class="nav-group">
+                    <div class="nav-group-label">
+                        <span class="nav-group-icon">📬</span> 邮件回复
+                    </div>
+                    <button class="nav-item active" data-page="generator">
+                        <span class="nav-item-icon">⚡</span> 生成回复
+                    </button>
+                    <button class="nav-item" data-page="history">
+                        <span class="nav-item-icon">🕐</span> 历史记录
+                    </button>
+                    <button class="nav-item" data-page="templates">
+                        <span class="nav-item-icon">📋</span> 回复模板
+                    </button>
+                </div>
+
+                <!-- 一级：邮件撰写 -->
+                <div class="nav-group">
+                    <div class="nav-group-label">
+                        <span class="nav-group-icon">✍️</span> 邮件撰写
+                    </div>
+                    <button class="nav-item" data-page="compose">
+                        <span class="nav-item-icon">🚀</span> 写邮件
+                    </button>
+                    <button class="nav-item" data-page="composeHistory">
+                        <span class="nav-item-icon">📁</span> 撰写记录
+                    </button>
+                    <button class="nav-item" data-page="composeTemplates">
+                        <span class="nav-item-icon">📝</span> 撰写模板
+                    </button>
+                </div>
+
+                <!-- 一级：资源管理 -->
+                <div class="nav-group">
+                    <div class="nav-group-label">
+                        <span class="nav-group-icon">📦</span> 资源管理
+                    </div>
+                    <button class="nav-item" data-page="customers">
+                        <span class="nav-item-icon">👥</span> 客户管理
+                    </button>
+                    <button class="nav-item" data-page="settings">
+                        <span class="nav-item-icon">⚙️</span> 全局设置
+                    </button>
+                </div>
+
+                <!-- 一级：其他 -->
+                <div class="nav-group">
+                    <div class="nav-group-label">
+                        <span class="nav-group-icon">💬</span> 其他
+                    </div>
+                    <button class="nav-item" data-page="profile">
+                        <span class="nav-item-icon">🪪</span> 个人资料
+                    </button>
+                    <button class="nav-item" data-page="feedback">
+                        <span class="nav-item-icon">💡</span> 意见反馈
+                    </button>
+                    <button class="nav-item" data-page="feedbackAdmin">
+                        <span class="nav-item-icon">🛠️</span> 反馈管理
+                    </button>
+                    <button class="nav-item" data-page="userAdmin">
+                        <span class="nav-item-icon">👤</span> 用户管理
+                    </button>
+                    <button class="nav-item" data-page="guide">
+                        <span class="nav-item-icon">📖</span> 使用手册
+                    </button>
+                </div>
+
+            </nav>
+
+            <div class="sidebar-footer">
+                <p class="sidebar-greeting" id="headerGreeting"></p>
+            </div>
+        </aside>
+
+        <!-- ===== 侧边栏遮罩（移动端） ===== -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <!-- ===== 右侧内容区 ===== -->
+        <main class="main-content">
+
+            <!-- 顶部面包屑 -->
+            <div class="topbar">
+                <button class="sidebar-toggle" id="sidebarToggle" aria-label="打开菜单">☰</button>
+                <div class="topbar-breadcrumb">
+                    <span class="topbar-group" id="topbarGroup">邮件回复</span>
+                    <span class="topbar-sep">›</span>
+                    <span class="topbar-page" id="topbarPage">生成回复</span>
+                </div>
+                <div class="topbar-user">
+                    <span class="topbar-username" id="topbarUsername"></span>
+                    <button class="btn btn-small btn-secondary" id="changePasswordBtn">改密码</button>
+                    <button class="btn btn-small btn-secondary" id="logoutBtn">退出</button>
+                </div>
+            </div>
+
+            <!-- ===== 生成回复 ===== -->
+            <div id="generator" class="page active">
+                <div class="page-header">
+                    <h2>生成回复</h2>
+                    <p class="page-desc">粘贴客户消息，AI 帮你生成中文 + 英文邮件 + 企业微信三套回复</p>
+                </div>
+
+                <div class="cecilia-banner">
+                    ✨ Hi Cecilia，把客户消息粘贴进来，我来帮你搞定回复 ~
+                </div>
+
+                <div class="form-section">
+                    <div class="template-load-bar">
+                        <span class="template-load-label">📋 加载模板</span>
+                        <button id="loadTemplateBtn" class="btn btn-secondary btn-sm">选择模板</button>
+                    </div>
+                    <div class="form-group customer-selector-group">
+                        <label>关联客户（可选）</label>
+                        <div class="customer-selector-wrap">
+                            <select id="generatorCustomerSelect" class="customer-selector-select">
+                                <option value="">— 不关联客户 —</option>
+                            </select>
+                            <span class="customer-selector-badge" id="generatorCustomerBadge" style="display:none;"></span>
+                        </div>
+                        <p class="customer-selector-hint" id="generatorCustomerHint" style="display:none;"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="chatContent">客户聊天内容</label>
+                        <textarea id="chatContent" rows="6" placeholder="粘贴客户发送的邮件或消息内容..." required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="scenario">场景</label>
+                            <select id="scenario">
+                                <option value="询盘">询盘 (Inquiry)</option>
+                                <option value="报价">报价 (Quotation)</option>
+                                <option value="价格谈判">价格谈判 (Price Negotiation)</option>
+                                <option value="订单确认">订单确认 (Order Confirmation)</option>
+                                <option value="发货通知">发货通知 (Shipping Notice)</option>
+                                <option value="物流跟踪">物流跟踪 (Logistics Tracking)</option>
+                                <option value="验货质检">验货/质检 (Inspection & QC)</option>
+                                <option value="投诉处理">投诉处理 (Complaint Handling)</option>
+                                <option value="催款">催款 (Payment Reminder)</option>
+                                <option value="样品申请">样品申请 (Sample Request)</option>
+                                <option value="售后服务">售后服务 (After-sales Service)</option>
+                                <option value="节假日维护">节假日维护 (Holiday Greetings)</option>
+                                <option value="一般交流">一般交流 (General Communication)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="tone">语气</label>
+                            <select id="tone">
+                                <option value="专业正式">专业正式 (Professional & Formal)</option>
+                                <option value="友好亲切">友好亲切 (Friendly & Warm)</option>
+                                <option value="诚恳歉意">诚恳歉意 (Sincere & Apologetic)</option>
+                                <option value="简洁高效">简洁高效 (Concise & Efficient)</option>
+                                <option value="热情积极">热情积极 (Enthusiastic & Positive)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="display:none;">
+                            <label for="numVersions">生成版本数</label>
+                            <select id="numVersions"><option value="3" selected>3个版本</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label>生成格式</label>
+                            <div class="format-info-box">📝 中文版本 &nbsp;+&nbsp; ✉️ 英文邮件 &nbsp;+&nbsp; 💬 企业微信格式</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="extraRequirements">额外要求（可选）</label>
+                        <textarea id="extraRequirements" rows="2" placeholder="例：必须提到质保期为1年、不要提退款政策、强调我们的快速交货能力..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button id="generateBtn" class="btn btn-primary">生成回复</button>
+                    </div>
+                </div>
+
+                <div id="resultsSection" class="results-section" style="display:none;">
+                    <h2>生成的回复</h2>
+                    <div id="resultsContainer"></div>
+                </div>
+            </div>
+
+            <!-- ===== 历史记录 ===== -->
+            <div id="history" class="page">
+                <div class="page-header">
+                    <h2>历史记录</h2>
+                    <p class="page-desc">每次生成的回复自动保存，保留最近 50 条</p>
+                </div>
+                <div class="page-toolbar search-toolbar">
+                    <div class="search-toolbar-main">
+                        <input id="historySearchQ" type="text" class="search-input" placeholder="搜索关键词（回复内容 / 标题 / 场景）">
+                        <select id="historySearchCustomer" class="search-customer-select">
+                            <option value="">全部客户</option>
+                        </select>
+                        <button id="historySearchBtn" class="btn btn-primary">搜索</button>
+                        <button id="historySearchClearBtn" class="btn btn-secondary">清除</button>
+                    </div>
+                    <button id="refreshHistoryBtn" class="btn btn-secondary btn-icon" title="刷新">↻</button>
+                </div>
+                <div id="historyContainer"></div>
+            </div>
+
+            <!-- ===== 写邮件 ===== -->
+            <div id="compose" class="page">
+                <div class="page-header">
+                    <h2>写邮件</h2>
+                    <p class="page-desc">主动开发客户 · 选择邮件类型，AI 帮你写一封专业的英文邮件</p>
+                </div>
+
+                <div class="cecilia-banner">
+                    ✍️ 主动出击！选好邮件类型，填入客户背景，AI 帮你写一封专业的开发邮件 ~
+                </div>
+
+                <!-- 加载模板 -->
+                <div class="template-load-bar" style="margin-bottom:16px;">
+                    <span class="template-load-label">📋 加载模板</span>
+                    <button id="loadComposeTemplateBtn" class="btn btn-secondary btn-sm">选择模板</button>
+                </div>
+
+                <!-- 邮件类型选择 -->
+                <div class="compose-type-grid" id="composeTypeGrid">
+                    <button class="compose-type-btn active" data-type="开发信">
+                        <span class="compose-type-icon">🚀</span>
+                        <span class="compose-type-label">开发信</span>
+                        <span class="compose-type-desc">Cold Outreach</span>
+                    </button>
+                    <button class="compose-type-btn" data-type="跟进邮件">
+                        <span class="compose-type-icon">🔄</span>
+                        <span class="compose-type-label">跟进邮件</span>
+                        <span class="compose-type-desc">Follow-up</span>
+                    </button>
+                    <button class="compose-type-btn" data-type="产品推荐">
+                        <span class="compose-type-icon">🎯</span>
+                        <span class="compose-type-label">产品推荐</span>
+                        <span class="compose-type-desc">Product Recommendation</span>
+                    </button>
+                    <button class="compose-type-btn" data-type="报价跟进">
+                        <span class="compose-type-icon">💰</span>
+                        <span class="compose-type-label">报价跟进</span>
+                        <span class="compose-type-desc">Quotation Follow-up</span>
+                    </button>
+                    <button class="compose-type-btn" data-type="节后跟进">
+                        <span class="compose-type-icon">🎉</span>
+                        <span class="compose-type-label">节后跟进</span>
+                        <span class="compose-type-desc">Post-Holiday Follow-up</span>
+                    </button>
+                    <!-- 自定义类型卡片动态插入此处，由 JS 渲染 -->
+                    <!-- 新增类型按钮 -->
+                    <button class="compose-type-btn compose-type-add" id="composeTypeAddBtn" title="新增自定义类型">
+                        <span class="compose-type-icon">＋</span>
+                        <span class="compose-type-label">新增类型</span>
+                        <span class="compose-type-desc">Custom</span>
+                    </button>
+                </div>
+                <!-- 新增类型面板（点击＋后展开） -->
+                <div id="composeAddTypeRow" class="compose-add-panel">
+                    <span class="compose-add-label">📝 新类型名称</span>
+                    <input type="text" id="composeNewTypeName" class="form-input"
+                        placeholder="例：催款邮件、样品申请、节日问候…" maxlength="20">
+                    <button type="button" id="composeNewTypeConfirm" class="btn btn-primary btn-small">确认添加</button>
+                    <button type="button" id="composeNewTypeCancel" class="btn btn-secondary btn-small">取消</button>
+                </div>
+
+                <div class="form-section" style="margin-top:24px;">
+                    <div class="form-group customer-selector-group">
+                        <label>关联客户（可选）</label>
+                        <div class="customer-selector-wrap">
+                            <select id="composeCustomerSelect" class="customer-selector-select">
+                                <option value="">— 不关联客户 —</option>
+                            </select>
+                            <span class="customer-selector-badge" id="composeCustomerBadge" style="display:none;"></span>
+                        </div>
+                        <p class="customer-selector-hint" id="composeCustomerHint" style="display:none;"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="composeTargetInfo">目标客户背景</label>
+                        <textarea id="composeTargetInfo" rows="5"
+                            placeholder="描述目标客户的信息，越详细越好。例：&#10;- 客户公司：XX Trading Co.，英国，主营家居类产品&#10;- 上次联系：2周前发过报价，客户未回复&#10;- 客户关注点：价格和交期&#10;- 本次目标：跟进报价，推进下单意向"
+                            required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="composeTone">语气</label>
+                            <select id="composeTone">
+                                <option value="专业正式">专业正式 (Professional & Formal)</option>
+                                <option value="友好亲切">友好亲切 (Friendly & Warm)</option>
+                                <option value="简洁高效">简洁高效 (Concise & Efficient)</option>
+                                <option value="热情积极">热情积极 (Enthusiastic & Positive)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="composeExtra">额外要求（可选）</label>
+                            <textarea id="composeExtra" rows="2" placeholder="例：一定要提到我们的快速交货优势、附上产品目录链接..."></textarea>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="composeBtn" class="btn btn-primary">✍️ 生成邮件</button>
+                    </div>
+                </div>
+
+                <div id="composeResultSection" class="results-section" style="display:none;">
+                    <div class="compose-result-tabs">
+                        <button class="compose-result-tab-btn active" data-lang="en">✉️ 英文邮件</button>
+                        <button class="compose-result-tab-btn" data-lang="zh">📝 中文对照</button>
+                    </div>
+                    <div id="composeResultContent" class="result-content" style="min-height:200px;"></div>
+                    <div class="form-actions" style="margin-top:12px;">
+                        <button id="composeCopyBtn" class="btn btn-secondary">复制</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 撰写记录 ===== -->
+            <div id="composeHistory" class="page">
+                <div class="page-header">
+                    <h2>撰写记录</h2>
+                    <p class="page-desc">所有生成的主动邮件自动存档</p>
+                </div>
+                <div class="page-toolbar search-toolbar">
+                    <div class="search-toolbar-main">
+                        <input id="composeHistorySearchQ" type="text" class="search-input" placeholder="搜索关键词（邮件内容 / 类型）">
+                        <select id="composeHistorySearchCustomer" class="search-customer-select">
+                            <option value="">全部客户</option>
+                        </select>
+                        <button id="composeHistorySearchBtn" class="btn btn-primary">搜索</button>
+                        <button id="composeHistorySearchClearBtn" class="btn btn-secondary">清除</button>
+                    </div>
+                    <button id="refreshComposeHistoryBtn" class="btn btn-secondary btn-icon" title="刷新">↻</button>
+                </div>
+                <div id="composeHistoryContainer"></div>
+            </div>
+
+            <!-- ===== 回复模板 ===== -->
+            <div id="templates" class="page">
+                <div class="page-header">
+                    <h2>回复模板</h2>
+                    <p class="page-desc">保存常用场景和语气，生成时一键加载</p>
+                </div>
+                <div class="page-toolbar">
+                    <button id="addTemplateBtn" class="btn btn-primary">添加新模板</button>
+                </div>
+                <div id="templatesContainer" class="templates-list"></div>
+            </div>
+
+            <!-- ===== 撰写模板 ===== -->
+            <div id="composeTemplates" class="page">
+                <div class="page-header">
+                    <h2>撰写模板</h2>
+                    <p class="page-desc">为不同邮件类型保存固定要求，写邮件时一键加载</p>
+                </div>
+                <div class="page-toolbar">
+                    <button id="addComposeTemplateBtn" class="btn btn-primary">添加撰写模板</button>
+                </div>
+                <div id="composeTemplatesContainer"></div>
+            </div>
+
+            <!-- ===== 客户管理 ===== -->
+            <div id="customers" class="page">
+                <div class="page-header">
+                    <h2>客户管理</h2>
+                    <p class="page-desc">管理客户档案、背景标签和合作状态，生成邮件时自动带入客户背景</p>
+                </div>
+                <div class="page-toolbar">
+                    <button id="addCustomerBtn" class="btn btn-primary">添加客户</button>
+                    <button id="importCsvBtn" class="btn btn-secondary">CSV 导入</button>
+                    <select id="customerStatusFilter" class="customer-status-filter">
+                        <option value="">全部状态</option>
+                        <option value="prospect">潜在客户</option>
+                        <option value="active">活跃客户</option>
+                        <option value="paused">暂停跟进</option>
+                        <option value="closed">已关闭</option>
+                    </select>
+                </div>
+                <div id="customersContainer"></div>
+            </div>
+
+            <!-- ===== 全局设置 ===== -->
+            <div id="settings" class="page">
+                <div class="page-header">
+                    <h2>全局设置</h2>
+                    <p class="page-desc">填写一次，自动带入每次生成的回复，无需重复填写</p>
+                </div>
+                <form id="settingsForm" class="settings-form">
+                    <div class="form-group">
+                        <label for="companyName">公司名称</label>
+                        <input type="text" id="companyName" placeholder="例：ABC Import & Export Co., Ltd">
+                    </div>
+                    <div class="form-group">
+                        <label for="productsInfo">产品背景知识（AI 参考用，不会原样输出到邮件）</label>
+                        <textarea id="productsInfo" rows="4" placeholder="例：主营产品：LED灯具、型号A001（额定功率50W）、质保期1年、MOQ 500pcs..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="contactInfo">联系方式</label>
+                        <textarea id="contactInfo" rows="2" placeholder="例：Tel: +86-xxx-xxxx | Email: sales@yourcompany.com"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="companySignature">邮件签名</label>
+                        <textarea id="companySignature" rows="4" placeholder="例：Best regards,&#10;Cecilia Wang&#10;Sales Manager | ABC Import & Export Co., Ltd&#10;Tel: +86-xxx-xxxx | Email: cecilia@abc.com"></textarea>
+                    </div>
+
+                    <hr style="margin: 24px 0; border: none; border-top: 1px solid var(--gray-200);">
+                    <h3 style="font-size:1rem; font-weight:700; color:var(--gray-900); margin-bottom:16px;">📮 邮箱账号（发送 &amp; 收取邮件用）</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="settingsEmailAddress">邮箱地址</label>
+                            <input type="email" id="settingsEmailAddress" placeholder="yourname@yourdomain.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="settingsEmailPassword">邮箱密码 / 授权码</label>
+                            <input type="password" id="settingsEmailPassword" placeholder="SMTP 授权码或登录密码">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="settingsSmtpHost">SMTP 服务器</label>
+                            <input type="text" id="settingsSmtpHost" placeholder="smtp.qiye.aliyun.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="settingsSmtpPort">SMTP 端口</label>
+                            <input type="number" id="settingsSmtpPort" placeholder="465">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="settingsImapHost">IMAP 服务器</label>
+                            <input type="text" id="settingsImapHost" placeholder="imap.qiye.aliyun.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="settingsImapPort">IMAP 端口</label>
+                            <input type="number" id="settingsImapPort" placeholder="993">
+                        </div>
+                    </div>
+                    <div class="form-actions" style="justify-content:flex-start; gap:12px;">
+                        <button type="submit" class="btn btn-primary">保存设置</button>
+                        <button type="button" id="testEmailConnectionBtn" class="btn btn-secondary">测试邮箱连接</button>
+                    </div>
+                    <div id="emailConnectionTestResult" style="display:none; margin-top:12px;"></div>
+                </form>
+            </div>
+
+            <!-- ===== 意见反馈 ===== -->
+            <div id="feedback" class="page">
+                <div class="page-header">
+                    <h2>意见反馈</h2>
+                    <p class="page-desc">有任何建议或问题，欢迎告诉我们，我们会尽快跟进优化</p>
+                </div>
+                <form id="feedbackForm" class="settings-form">
+                    <div class="form-group">
+                        <label for="feedbackCategory">反馈类型</label>
+                        <select id="feedbackCategory">
+                            <option value="功能建议">功能建议</option>
+                            <option value="体验问题">体验问题</option>
+                            <option value="生成质量">生成质量</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedbackContent">反馈内容</label>
+                        <textarea id="feedbackContent" rows="5" placeholder="请描述您的建议或遇到的问题..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>附上截图 <span style="color:var(--gray-400);font-weight:400;font-size:0.85rem;">（可选，最多 5 张，支持粘贴 Ctrl+V）</span></label>
+                        <div id="screenshotList" class="screenshot-list"></div>
+                        <div class="screenshot-actions">
+                            <button type="button" id="screenshotAddBtn" class="btn btn-secondary btn-small">＋ 添加截图</button>
+                        </div>
+                        <input type="file" id="screenshotFileInput" accept="image/*" style="display:none;">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">提交反馈</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ===== 反馈管理 ===== -->
+            <div id="feedbackAdmin" class="page">
+                <div class="page-header">
+                    <h2>反馈管理</h2>
+                    <p class="page-desc">查看和处理用户提交的意见反馈</p>
+                </div>
+                <div class="page-toolbar">
+                    <button id="refreshFeedbackBtn" class="btn btn-secondary">刷新</button>
+                </div>
+                <div id="feedbackAdminContainer"></div>
+            </div>
+
+            <!-- ===== 使用手册 ===== -->
+            <div id="guide" class="page">
+                <div class="guide-hero">
+                    <div class="guide-hero-icon">✉️</div>
+                    <h2>Cecilia Auto Mail 使用手册</h2>
+                    <p>专属外贸邮件助手 · 生成回复 + 主动撰写 + 客户管理 + 邮件中心 · 一站式搞定</p>
+                </div>
+
+                <div class="guide-grid">
+                    <div class="guide-card guide-card-blue">
+                        <div class="guide-card-icon">⚡</div>
+                        <h3>生成回复</h3>
+                        <ol class="guide-steps">
+                            <li>将客户发来的邮件/消息<strong>粘贴</strong>到「客户聊天内容」</li>
+                            <li>可选：下拉选择关联的<strong>客户档案</strong>，背景自动带入</li>
+                            <li>选择<strong>场景</strong>和<strong>语气</strong></li>
+                            <li>点击 <strong>「生成回复」</strong>，等待 AI 生成</li>
+                            <li>切换三个版本，点击<strong>「复制」</strong>直接使用</li>
+                        </ol>
+                    </div>
+                    <div class="guide-card guide-card-purple">
+                        <div class="guide-card-icon">📄</div>
+                        <h3>三种回复格式</h3>
+                        <ul class="guide-list">
+                            <li><span class="guide-tag">📝 中文版本</span> 回复的中文对照，方便理解核对</li>
+                            <li><span class="guide-tag">✉️ 英文邮件</span> 完整商务邮件，含主题行、称呼、签名</li>
+                            <li><span class="guide-tag">💬 企业微信</span> 去掉邮件格式，2-3句直达核心</li>
+                        </ul>
+                    </div>
+                    <div class="guide-card guide-card-green">
+                        <div class="guide-card-icon">🚀</div>
+                        <h3>主动撰写邮件</h3>
+                        <p class="guide-desc">侧边栏「写邮件」，支持以下类型：</p>
+                        <ul class="guide-list">
+                            <li><strong>开发信</strong> — 主动开拓新客户</li>
+                            <li><strong>跟进邮件</strong> — 通用跟进沟通</li>
+                            <li><strong>产品推荐</strong> — 向客户推荐新品</li>
+                            <li><strong>报价跟进</strong> — 发完报价无回音时</li>
+                            <li><strong>节后跟进</strong> — 节假日后重新联系</li>
+                        </ul>
+                    </div>
+                    <div class="guide-card guide-card-blue">
+                        <div class="guide-card-icon">👥</div>
+                        <h3>客户管理</h3>
+                        <ul class="guide-list">
+                            <li>创建客户档案：姓名、公司、行业、产品偏好、背景备注</li>
+                            <li>生成回复/撰写邮件时选择客户，<strong>背景信息自动注入 AI</strong></li>
+                            <li>客户详情页查看该客户的<strong>完整往来记录</strong></li>
+                            <li>状态分类：潜在 / 活跃 / 暂停 / 已关闭</li>
+                            <li>支持 <strong>CSV 批量导入</strong>，可下载模板后填写上传</li>
+                        </ul>
+                    </div>
+                    <div class="guide-card guide-card-purple">
+                        <div class="guide-card-icon">⚙️</div>
+                        <h3>全局设置（强烈推荐）</h3>
+                        <p class="guide-desc">填写一次，之后每次生成自动带入：</p>
+                        <ul class="guide-list">
+                            <li><strong>公司名称</strong> — 自动写入邮件背景</li>
+                            <li><strong>产品背景知识</strong> — 仅供 AI 参考，不原样输出</li>
+                            <li><strong>联系方式</strong> — 自动带入签名区</li>
+                            <li><strong>邮件签名</strong> — 每封英文邮件自动附上</li>
+                            <li><strong>邮箱账号配置</strong> — 配置后开启邮件中心功能</li>
+                        </ul>
+                    </div>
+                    <div class="guide-card guide-card-green">
+                        <div class="guide-card-icon">🔍</div>
+                        <h3>额外要求 &amp; 模板</h3>
+                        <p class="guide-desc">每次生成可临时填写本次特殊要求：</p>
+                        <ul class="guide-list">
+                            <li>例：<em>「强调可以加急发货，3天出货」</em></li>
+                            <li>例：<em>「语气温和，不要提价格上涨」</em></li>
+                            <li>常用组合可保存为<strong>模板</strong>，下次一键加载</li>
+                        </ul>
+                    </div>
+                    <div class="guide-card guide-card-blue">
+                        <div class="guide-card-icon">📂</div>
+                        <h3>历史记录搜索</h3>
+                        <ul class="guide-list">
+                            <li>「历史记录」和「撰写记录」页均支持搜索筛选</li>
+                            <li><strong>关键词搜索</strong>：匹配回复内容、标题、场景/类型</li>
+                            <li><strong>客户下拉筛选</strong>：从客户管理自动同步，切换即触发搜索</li>
+                            <li>点击「清除」恢复显示全部记录</li>
+                        </ul>
+                    </div>
+                    <div class="guide-card guide-card-purple">
+                        <div class="guide-card-icon">💬</div>
+                        <h3>意见反馈</h3>
+                        <ul class="guide-list">
+                            <li>选择反馈类型，填写建议或问题描述</li>
+                            <li>支持<strong>上传截图</strong>：点击「＋ 添加截图」或直接 <strong>Ctrl+V 粘贴</strong></li>
+                            <li>最多可附上 <strong>5 张截图</strong>，方便精准定位问题</li>
+                            <li>每张截图可单独移除，已选图片右上角点 ✕ 删除</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 邮件中心 -->
+                <div class="guide-scenarios" style="margin-top:24px;">
+                    <h3>📮 邮件中心使用说明</h3>
+                    <p style="color:var(--gray-500);margin:8px 0 16px;">使用前需在「全局设置」填写邮箱账号信息并测试连接成功</p>
+                    <div class="guide-grid" style="margin-top:0">
+                        <div class="guide-card guide-card-blue">
+                            <div class="guide-card-icon">📥</div>
+                            <h3>收件箱</h3>
+                            <ul class="guide-list">
+                                <li>通过 IMAP 读取邮箱最新 50 封邮件</li>
+                                <li>点击邮件查看全文</li>
+                                <li>点击<strong>「填入回复生成」</strong>，邮件内容自动带入 AI 生成页面</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card guide-card-purple">
+                            <div class="guide-card-icon">📤</div>
+                            <h3>发邮件</h3>
+                            <ul class="guide-list">
+                                <li>选择客户后<strong>自动填入对方邮箱</strong></li>
+                                <li>可选择邮件模板，<strong>自动替换</strong> <code>{{name}}</code> <code>{{company}}</code> 等占位符</li>
+                                <li>发送前弹出<strong>预览确认框</strong>，核对无误再发出，防止误发</li>
+                                <li>发送记录自动保存到「发送记录」</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card guide-card-green">
+                            <div class="guide-card-icon">📨</div>
+                            <h3>群发邮件</h3>
+                            <ol class="guide-steps">
+                                <li>编写模板，用 <code>{{name}}</code> <code>{{company}}</code> <code>{{country}}</code> 作为占位符</li>
+                                <li>勾选要发送的客户</li>
+                                <li>预览第一封确认内容，点击<strong>「确认群发」</strong></li>
+                                <li>每封邮件自动替换为该客户的真实信息</li>
+                            </ol>
+                        </div>
+                        <div class="guide-card guide-card-blue">
+                            <div class="guide-card-icon">📋</div>
+                            <h3>发送记录 &amp; 联系统计</h3>
+                            <ul class="guide-list">
+                                <li><strong>发送记录</strong>：查看所有单发/群发历史，含状态和客户关联</li>
+                                <li><strong>联系统计</strong>：每个客户的互动次数、已发邮件数</li>
+                                <li>距上次联系天数颜色提示：<span style="color:#22c55e">●</span> &lt;14天  <span style="color:#f59e0b">●</span> 15-30天  <span style="color:#ef4444">●</span> &gt;30天</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="guide-scenarios" style="margin-top:24px;">
+                    <h3>支持的场景一览</h3>
+                    <div class="guide-scenario-grid">
+                        <span class="guide-scenario-item">询盘</span>
+                        <span class="guide-scenario-item">报价</span>
+                        <span class="guide-scenario-item">价格谈判</span>
+                        <span class="guide-scenario-item">订单确认</span>
+                        <span class="guide-scenario-item">发货通知</span>
+                        <span class="guide-scenario-item">物流跟踪</span>
+                        <span class="guide-scenario-item">验货 / 质检</span>
+                        <span class="guide-scenario-item">投诉处理</span>
+                        <span class="guide-scenario-item">催款</span>
+                        <span class="guide-scenario-item">样品申请</span>
+                        <span class="guide-scenario-item">售后服务</span>
+                        <span class="guide-scenario-item">节假日维护</span>
+                        <span class="guide-scenario-item">一般交流</span>
+                    </div>
+                </div>
+
+                <div class="guide-tip">
+                    💡 <strong>小技巧：</strong>客户消息越完整，生成效果越好。建议完整粘贴客户原始消息，AI 会根据上下文生成更贴切的回复。客户档案填写得越详细，个性化程度越高。批量导入客户时可下载 CSV 模板，按格式填写后一键导入。反馈问题时附上截图（可直接 Ctrl+V 粘贴），定位更快。
+                </div>
+            </div>
+
+            <!-- ===== 用户管理（admin only） ===== -->
+            <div id="userAdmin" class="page">
+                <div class="page-header">
+                    <h2>用户管理</h2>
+                    <p class="page-desc">查看所有账号，重置密码，禁用或启用账号</p>
+                </div>
+                <div id="userAdminContainer">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+
+            <!-- ===== 个人资料 ===== -->
+            <div id="profile" class="page">
+                <div class="page-header">
+                    <h2>个人资料</h2>
+                    <p class="page-desc">自定义你的头像、昵称、职位等个人信息</p>
+                </div>
+
+                <div class="profile-layout">
+                    <!-- 左：头像卡片 -->
+                    <div class="profile-avatar-card">
+                        <div class="profile-avatar-display" id="profileAvatarDisplay">👤</div>
+                        <div class="profile-username" id="profileUsernameDisplay"></div>
+                        <div class="profile-role-badge" id="profileRoleBadge"></div>
+
+                        <!-- 上传图片 -->
+                        <input type="file" id="profileAvatarFile" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+                        <button class="btn btn-secondary btn-small profile-upload-btn" id="profileAvatarUploadBtn">📷 上传图片</button>
+                        <button class="btn btn-secondary btn-small profile-clear-avatar-btn" id="profileClearAvatarBtn" style="display:none">✕ 移除图片</button>
+
+                        <div class="profile-divider"><span>或选择表情头像</span></div>
+                        <div class="profile-emoji-grid" id="profileEmojiGrid"></div>
+                    </div>
+
+                    <!-- 右：资料表单 -->
+                    <div class="profile-form-card">
+                        <div class="form-group">
+                            <label for="profileDisplayName">昵称 / 显示名</label>
+                            <input type="text" id="profileDisplayName" class="form-input" placeholder="例：Cecilia · 外贸经理" maxlength="50">
+                        </div>
+                        <div class="form-group">
+                            <label for="profileTitle">职位</label>
+                            <input type="text" id="profileTitle" class="form-input" placeholder="例：外贸业务经理、Sales Manager" maxlength="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="profileCompany">公司</label>
+                            <input type="text" id="profileCompany" class="form-input" placeholder="例：XX 进出口贸易有限公司" maxlength="255">
+                        </div>
+                        <div class="form-group">
+                            <label for="profileBio">个人简介</label>
+                            <textarea id="profileBio" rows="4" class="form-input" placeholder="简单介绍一下自己，例：专注外贸10年，擅长开发欧美市场客户…" maxlength="500"></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button id="profileSaveBtn" class="btn btn-primary">保存资料</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 收件箱 ===== -->
+            <div id="emailInbox" class="page">
+                <div class="page-header">
+                    <h2>收件箱</h2>
+                    <p class="page-desc">通过 IMAP 读取邮箱最新邮件，点击邮件可一键填入回复生成</p>
+                </div>
+                <div class="page-toolbar">
+                    <button id="refreshInboxBtn" class="btn btn-primary">刷新收件箱</button>
+                    <span class="inbox-status" id="inboxStatus"></span>
+                </div>
+                <div id="inboxContainer">
+                    <div class="email-center-tip">
+                        点击「刷新收件箱」加载最新邮件（需先在全局设置中配置邮箱账号）
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 发邮件（单发） ===== -->
+            <div id="emailSend" class="page">
+                <div class="page-header">
+                    <h2>发邮件</h2>
+                    <p class="page-desc">直接通过系统发送邮件，发送记录自动存档</p>
+                </div>
+                <div class="form-section" style="max-width:700px;">
+                    <div class="template-load-bar">
+                        <span class="template-load-label">📋 加载模板</span>
+                        <button class="btn btn-secondary btn-sm" onclick="openEmailTemplateSelector('send')">选择模板</button>
+                    </div>
+                    <div class="form-group customer-selector-group">
+                        <label>关联客户（可选）</label>
+                        <div class="customer-selector-wrap">
+                            <div class="cust-search-wrap" id="sendCustSearchWrap">
+                                <input type="text" id="sendCustSearchInput" class="cust-search-input"
+                                    placeholder="输入客户姓名或公司名搜索…" autocomplete="off">
+                                <button type="button" class="cust-search-clear" id="sendCustSearchClear" style="display:none;" title="清除关联">✕</button>
+                                <div class="cust-search-dropdown" id="sendCustSearchDropdown"></div>
+                            </div>
+                        </div>
+                        <p class="customer-selector-hint" id="sendCustomerHint" style="display:none;"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="sendToAddress">收件人邮箱 *</label>
+                        <input type="email" id="sendToAddress" placeholder="recipient@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="sendSubject">邮件主题 *</label>
+                        <input type="text" id="sendSubject" placeholder="邮件主题" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="sendBody">邮件正文 *</label>
+                        <textarea id="sendBody" rows="12" placeholder="在此输入邮件正文..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>附件（可选，支持多个文件，单个不超过 10MB）</label>
+                        <div class="attachment-upload-area" id="attachmentDropZone">
+                            <input type="file" id="sendAttachments" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.zip,.rar,.txt,.csv" style="display:none">
+                            <div class="attachment-placeholder" id="attachmentPlaceholder">
+                                <span>📎 点击选择附件，或将文件拖拽到此处</span>
+                            </div>
+                            <ul class="attachment-list" id="attachmentList"></ul>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="sendEmailBtn" class="btn btn-primary">发送邮件</button>
+                    </div>
+                    <div id="sendEmailResult" style="display:none; margin-top:12px;"></div>
+                </div>
+            </div>
+
+            <!-- ===== 群发邮件 ===== -->
+            <div id="emailBulk" class="page">
+                <div class="page-header">
+                    <h2>群发邮件</h2>
+                    <p class="page-desc">编辑邮件模板，用 {{name}} {{company}} {{email}} 等占位符，系统自动替换每位客户信息后群发</p>
+                </div>
+
+                <div class="bulk-workflow">
+                    <!-- Step 1: 编写模板 -->
+                    <div class="bulk-step">
+                        <div class="bulk-step-header">
+                            <span class="bulk-step-num">1</span>
+                            <span class="bulk-step-title">编写邮件模板</span>
+                        </div>
+                        <div class="form-section" style="max-width:700px;">
+                            <div class="bulk-placeholders-tip">
+                                <div style="margin-bottom:6px;font-weight:600;">可用占位符：</div>
+                                <div class="bulk-ph-grid">
+                                    <code>{{name}}</code><span>客户姓名</span>
+                                    <code>{{company}}</code><span>公司名称</span>
+                                    <code>{{country}}</code><span>所在国家</span>
+                                    <code>{{email}}</code><span>客户邮箱</span>
+                                    <code>{{product}}</code><span>产品偏好</span>
+                                    <code>{{industry}}</code><span>所在行业</span>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <button class="btn btn-secondary btn-sm" onclick="openEmailTemplateSelector('bulk')">📝 加载模板</button>
+                            </div>
+                            <div class="form-group">
+                                <label for="bulkSubject">邮件主题</label>
+                                <input type="text" id="bulkSubject" placeholder="例：New Product Launch - {{company}}">
+                            </div>
+                            <div class="form-group">
+                                <label for="bulkBody">邮件正文</label>
+                                <textarea id="bulkBody" rows="12"
+                                    placeholder="Dear {{name}},&#10;&#10;Hope this email finds you well...&#10;&#10;Best regards,&#10;Cecilia"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: 选择收件人 -->
+                    <div class="bulk-step">
+                        <div class="bulk-step-header">
+                            <span class="bulk-step-num">2</span>
+                            <span class="bulk-step-title">选择收件客户</span>
+                        </div>
+                        <div class="page-toolbar">
+                            <select id="bulkStatusFilter" class="customer-status-filter">
+                                <option value="">全部状态</option>
+                                <option value="prospect">潜在客户</option>
+                                <option value="active">活跃客户</option>
+                                <option value="paused">暂停跟进</option>
+                                <option value="closed">已关闭</option>
+                            </select>
+                            <button id="loadBulkCustomersBtn" class="btn btn-secondary">加载客户列表</button>
+                            <button id="selectAllBulkBtn" class="btn btn-secondary">全选</button>
+                            <button id="deselectAllBulkBtn" class="btn btn-secondary">取消全选</button>
+                        </div>
+                        <div id="bulkCustomerList" class="bulk-customer-list"></div>
+                        <p class="bulk-selected-count" id="bulkSelectedCount">已选 0 位客户</p>
+                    </div>
+
+                    <!-- Step 3: 预览并发送 -->
+                    <div class="bulk-step">
+                        <div class="bulk-step-header">
+                            <span class="bulk-step-num">3</span>
+                            <span class="bulk-step-title">附件 &amp; 预览 &amp; 发送</span>
+                        </div>
+                        <div class="form-section" style="max-width:700px;padding-bottom:0;">
+                            <div class="form-group" style="margin-bottom:12px;">
+                                <label>附件（可选，每封邮件都会附带相同附件，单个不超过 10MB）</label>
+                                <div class="attachment-upload-area" id="bulkAttachmentDropZone">
+                                    <input type="file" id="bulkAttachments" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.zip,.rar,.txt,.csv" style="display:none">
+                                    <div class="attachment-placeholder" id="bulkAttachmentPlaceholder">
+                                        <span>📎 点击选择附件，或将文件拖拽到此处</span>
+                                    </div>
+                                    <ul class="attachment-list" id="bulkAttachmentList"></ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-actions" style="justify-content:flex-start;">
+                            <button id="previewBulkBtn" class="btn btn-secondary">预览第一封</button>
+                            <button id="sendBulkBtn" class="btn btn-primary">确认群发</button>
+                        </div>
+                        <div id="bulkSendResult" style="display:none; margin-top:16px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 发送记录 ===== -->
+            <div id="emailSentLog" class="page">
+                <div class="page-header">
+                    <h2>发送记录</h2>
+                    <p class="page-desc">通过系统发送的所有邮件记录（单发 + 群发）</p>
+                </div>
+                <div class="page-toolbar">
+                    <button id="refreshSentLogBtn" class="btn btn-secondary">刷新</button>
+                </div>
+                <div id="sentLogContainer"></div>
+            </div>
+
+            <!-- ===== 联系统计 ===== -->
+            <div id="contactStats" class="page">
+                <div class="page-header">
+                    <h2>联系统计</h2>
+                    <p class="page-desc">统计每位客户的联系频率和最近跟进时间，帮你识别需要跟进的客户</p>
+                </div>
+                <div class="page-toolbar">
+                    <label style="font-size:0.88rem;color:var(--gray-600);display:flex;align-items:center;gap:6px;">
+                        超过
+                        <input type="number" id="contactOverdueDays" value="30" min="1" max="365"
+                            style="width:60px;padding:4px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:0.88rem;text-align:center;">
+                        天未联系标记为逾期
+                    </label>
+                    <button id="refreshContactStatsBtn" class="btn btn-secondary">刷新</button>
+                </div>
+                <div id="contactStatsSummary"></div>
+                <div id="contactStatsContainer"></div>
+            </div>
+
+            <!-- ===== 邮件模板 ===== -->
+            <div id="emailTemplates" class="page">
+                <div class="page-header">
+                    <h2>邮件模板</h2>
+                    <p class="page-desc">保存常用邮件主题和正文模板，群发或单发时一键加载</p>
+                </div>
+
+                <!-- 使用说明 -->
+                <div class="et-guide-box" style="max-width:900px;">
+                    <div class="et-guide-toggle" onclick="this.parentElement.classList.toggle('open')">
+                        <span>📖 使用说明 &amp; 占位符说明</span>
+                        <span class="et-guide-arrow">▾</span>
+                    </div>
+                    <div class="et-guide-content">
+                        <p style="margin:0 0 10px;color:var(--gray-600);font-size:0.9rem;">
+                            模板支持<strong>占位符</strong>，发送时系统自动替换为每位客户的真实信息。适用于群发邮件场景。
+                        </p>
+                        <div class="et-placeholder-table">
+                            <div class="et-placeholder-row et-placeholder-header">
+                                <span>占位符</span><span>替换内容</span><span>示例</span>
+                            </div>
+                            <div class="et-placeholder-row">
+                                <code>{{name}}</code><span>客户姓名</span><span class="et-eg">John</span>
+                            </div>
+                            <div class="et-placeholder-row">
+                                <code>{{company}}</code><span>公司名称</span><span class="et-eg">ABC Trading Co.</span>
+                            </div>
+                            <div class="et-placeholder-row">
+                                <code>{{country}}</code><span>所在国家</span><span class="et-eg">Germany</span>
+                            </div>
+                            <div class="et-placeholder-row">
+                                <code>{{email}}</code><span>客户邮箱</span><span class="et-eg">john@abc.com</span>
+                            </div>
+                            <div class="et-placeholder-row">
+                                <code>{{product}}</code><span>产品偏好</span><span class="et-eg">Valves &amp; Fittings</span>
+                            </div>
+                            <div class="et-placeholder-row">
+                                <code>{{industry}}</code><span>所在行业</span><span class="et-eg">Chemical</span>
+                            </div>
+                        </div>
+                        <p style="margin:10px 0 0;color:var(--gray-500);font-size:0.82rem;">
+                            💡 单发邮件时占位符不会自动替换，建议手动修改后发送。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 工具栏 + 列表 -->
+                <div class="page-toolbar" style="margin-top:20px;">
+                    <button class="btn btn-primary" onclick="openEmailTemplateModal()">+ 新建模板</button>
+                    <button id="refreshEmailTemplatesBtn" class="btn btn-secondary">刷新</button>
+                </div>
+                <div id="emailTemplateList"></div>
+            </div>
+
+            <!-- 邮件模板选择弹窗占位（实际弹窗在 Modals 区） -->
+
+        </main>
+    </div><!-- /.app-layout -->
+
+    <!-- ===== Modals ===== -->
+    <div id="templateModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>添加新模板</h2>
+            <form id="templateForm">
+                <div class="form-group">
+                    <label for="templateName">模板名称</label>
+                    <input type="text" id="templateName" required>
+                </div>
+                <div class="form-group">
+                    <label for="templateScenario">场景</label>
+                    <select id="templateScenario">
+                        <option value="询盘">询盘</option>
+                        <option value="报价">报价</option>
+                        <option value="价格谈判">价格谈判</option>
+                        <option value="订单确认">订单确认</option>
+                        <option value="发货通知">发货通知</option>
+                        <option value="物流跟踪">物流跟踪</option>
+                        <option value="验货质检">验货/质检</option>
+                        <option value="投诉处理">投诉处理</option>
+                        <option value="催款">催款</option>
+                        <option value="样品申请">样品申请</option>
+                        <option value="售后服务">售后服务</option>
+                        <option value="节假日维护">节假日维护</option>
+                        <option value="一般交流">一般交流</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="templateTone">语气</label>
+                    <select id="templateTone">
+                        <option value="专业正式">专业正式</option>
+                        <option value="友好亲切">友好亲切</option>
+                        <option value="诚恳歉意">诚恳歉意</option>
+                        <option value="简洁高效">简洁高效</option>
+                        <option value="热情积极">热情积极</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="templateDescription">描述（可选）</label>
+                    <textarea id="templateDescription" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="templateExtraReq">额外要求（可选）</label>
+                    <textarea id="templateExtraReq" rows="3" placeholder="例：必须提到质保期为1年、不要提退款政策..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">保存模板</button>
+                    <button type="button" class="btn btn-secondary" id="cancelTemplateBtn">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="templateSelectorModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>选择模板</h2>
+            <div id="templateSelectorContainer"></div>
+        </div>
+    </div>
+
+    <!-- 撰写模板新增 Modal -->
+    <div id="composeTemplateModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>添加撰写模板</h2>
+            <form id="composeTemplateForm">
+                <div class="form-group">
+                    <label for="ctName">模板名称</label>
+                    <input type="text" id="ctName" placeholder="例：开发信-家居买家" required>
+                </div>
+                <div class="form-group">
+                    <label for="ctType">邮件类型</label>
+                    <select id="ctType">
+                        <option value="开发信">🚀 开发信</option>
+                        <option value="跟进邮件">🔄 跟进邮件</option>
+                        <option value="产品推荐">🎯 产品推荐</option>
+                        <option value="报价跟进">💰 报价跟进</option>
+                        <option value="节后跟进">🎉 节后跟进</option>
+                        <option value="自定义">✏️ 自定义</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ctTone">语气</label>
+                    <select id="ctTone">
+                        <option value="专业正式">专业正式</option>
+                        <option value="友好亲切">友好亲切</option>
+                        <option value="简洁高效">简洁高效</option>
+                        <option value="热情积极">热情积极</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ctDesc">模板说明（可选）</label>
+                    <textarea id="ctDesc" rows="2" placeholder="简单描述这个模板适合什么场景..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="ctFixed">固定要求（每次使用此模板都会带入）</label>
+                    <textarea id="ctFixed" rows="4"
+                        placeholder="例：&#10;- 必须提到我们工厂有 ISO 认证&#10;- 强调 15 天快速交货&#10;- 末尾邀请对方视频沟通"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">保存模板</button>
+                    <button type="button" class="btn btn-secondary" id="cancelComposeTemplateBtn">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 撰写模板选择 Modal -->
+    <div id="composeTemplateSelectorModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>选择撰写模板</h2>
+            <p style="font-size:0.85rem;color:var(--gray-400);margin-bottom:16px;">选择后自动填入邮件类型、语气和固定要求</p>
+            <div id="composeTemplateSelectorContainer"></div>
+        </div>
+    </div>
+
+    <div id="historyDetailModal" class="modal">
+        <div class="modal-content modal-content-wide">
+            <span class="close" id="historyDetailClose">&times;</span>
+            <div id="historyDetailMeta" class="history-detail-meta"></div>
+            <div class="history-detail-tabs">
+                <button class="detail-tab-btn active" data-type="zh">📝 中文版本</button>
+                <button class="detail-tab-btn" data-type="en">✉️ 英文邮件</button>
+                <button class="detail-tab-btn" data-type="wechat">💬 企业微信</button>
+            </div>
+            <div id="historyDetailContent" class="history-detail-content"></div>
+            <div class="form-actions" style="margin-top:16px">
+                <button class="btn btn-primary" id="historyDetailCopyBtn">复制当前版本</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 客户新增/编辑 Modal ===== -->
+    <div id="customerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="customerModalClose">&times;</span>
+            <h2 id="customerModalTitle">添加客户</h2>
+            <form id="customerForm">
+                <input type="hidden" id="customerFormId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customerName">姓名 *</label>
+                        <input type="text" id="customerName" required placeholder="客户姓名">
+                    </div>
+                    <div class="form-group">
+                        <label for="customerCompany">公司</label>
+                        <input type="text" id="customerCompany" placeholder="公司名称">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customerEmail">邮箱</label>
+                        <input type="email" id="customerEmail" placeholder="email@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="customerPhone">电话</label>
+                        <input type="text" id="customerPhone" placeholder="+1-xxx-xxxx">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customerCountry">国家/地区</label>
+                        <input type="text" id="customerCountry" placeholder="例：美国、德国、英国">
+                    </div>
+                    <div class="form-group">
+                        <label for="customerStatus">合作状态</label>
+                        <select id="customerStatus">
+                            <option value="prospect">潜在客户</option>
+                            <option value="active">活跃客户</option>
+                            <option value="paused">暂停跟进</option>
+                            <option value="closed">已关闭</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customerIndustry">行业</label>
+                        <input type="text" id="customerIndustry" placeholder="例：家居、电子、服装">
+                    </div>
+                    <div class="form-group">
+                        <label for="customerProductPref">产品偏好</label>
+                        <input type="text" id="customerProductPref" placeholder="例：LED灯具、吸顶灯">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="customerTags">标签（逗号分隔）</label>
+                    <input type="text" id="customerTags" placeholder="例：大客户, 长期合作, 价格敏感">
+                </div>
+                <div class="form-group">
+                    <label for="customerBackground">客户背景备注</label>
+                    <textarea id="customerBackground" rows="4"
+                        placeholder="记录客户的关键背景信息：沟通历史、特别关注点、决策习惯等。生成邮件时 AI 会参考这些信息。"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" class="btn btn-secondary" id="cancelCustomerBtn">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== 客户详情 Modal ===== -->
+    <div id="customerDetailModal" class="modal">
+        <div class="modal-content modal-content-wide">
+            <span class="close" id="customerDetailClose">&times;</span>
+            <div id="customerDetailHeader" class="customer-detail-header"></div>
+            <div class="customer-detail-tabs">
+                <button class="customer-detail-tab-btn active" data-tab="info">基本信息</button>
+                <button class="customer-detail-tab-btn" data-tab="history">往来记录</button>
+            </div>
+            <div id="customerDetailInfo" class="customer-detail-panel"></div>
+            <div id="customerDetailHistory" class="customer-detail-panel" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- ===== 修改密码 Modal ===== -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content" style="max-width:420px;">
+            <span class="close" id="changePasswordClose">&times;</span>
+            <h2>修改密码</h2>
+            <form id="changePasswordForm">
+                <div class="form-group">
+                    <label for="cpOldPassword">当前密码</label>
+                    <input type="password" id="cpOldPassword" placeholder="请输入当前密码" required>
+                </div>
+                <div class="form-group">
+                    <label for="cpNewPassword">新密码</label>
+                    <input type="password" id="cpNewPassword" placeholder="至少4位" required>
+                </div>
+                <div class="form-group">
+                    <label for="cpConfirmPassword">确认新密码</label>
+                    <input type="password" id="cpConfirmPassword" placeholder="再次输入新密码" required>
+                </div>
+                <div id="cpError" class="login-error" style="display:none;"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="changePasswordCancel">取消</button>
+                    <button type="submit" class="btn btn-primary" id="changePasswordSubmit">确认修改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== 重置他人密码 Modal ===== -->
+    <div id="resetPasswordModal" class="modal">
+        <div class="modal-content" style="max-width:380px;">
+            <span class="close" id="resetPasswordClose">&times;</span>
+            <h2>重置密码</h2>
+            <p id="resetPasswordDesc" style="color:var(--gray-500);margin-bottom:16px;font-size:0.9rem;"></p>
+            <input type="hidden" id="resetPasswordUserId">
+            <div class="form-group">
+                <label for="resetPasswordValue">新密码</label>
+                <input type="password" id="resetPasswordValue" placeholder="至少4位" required>
+            </div>
+            <div id="rpError" class="login-error" style="display:none;"></div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="resetPasswordCancel">取消</button>
+                <button type="button" class="btn btn-primary" id="resetPasswordSubmit">确认重置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 邮件内容预览 Modal ===== -->
+    <div id="emailPreviewModal" class="modal">
+        <div class="modal-content modal-content-wide">
+            <span class="close" id="emailPreviewClose">&times;</span>
+            <div id="emailPreviewMeta" class="email-preview-meta"></div>
+            <div class="email-preview-subject" id="emailPreviewSubject"></div>
+            <div id="emailPreviewBody" class="email-preview-body"></div>
+            <div class="form-actions" style="margin-top:16px;">
+                <button id="emailPreviewUseBtn" class="btn btn-primary">填入回复生成</button>
+                <button class="btn btn-secondary" id="emailPreviewCloseBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 单发预览确认 Modal ===== -->
+    <div id="sendPreviewModal" class="modal">
+        <div class="modal-content modal-content-wide">
+            <span class="close" id="sendPreviewClose">&times;</span>
+            <h2>发送前确认</h2>
+            <div class="form-group">
+                <label>收件人</label>
+                <div id="sendPreviewTo" class="email-preview-meta"></div>
+            </div>
+            <div class="form-group">
+                <label>主题</label>
+                <div id="sendPreviewSubject" class="email-preview-subject"></div>
+            </div>
+            <div class="form-group">
+                <label>正文</label>
+                <div id="sendPreviewBody" class="email-preview-body"></div>
+            </div>
+            <div class="form-group" id="sendPreviewAttachRow" style="display:none;">
+                <label>附件</label>
+                <div id="sendPreviewAttach" class="email-preview-meta"></div>
+            </div>
+            <div class="form-actions" style="margin-top:16px;">
+                <button class="btn btn-secondary" id="sendPreviewCancelBtn">取消</button>
+                <button class="btn btn-primary" id="sendPreviewConfirmBtn">确认发送</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 群发预览 Modal ===== -->
+    <div id="bulkPreviewModal" class="modal">
+        <div class="modal-content modal-content-wide">
+            <span class="close" id="bulkPreviewClose">&times;</span>
+            <h2>预览（第1封）</h2>
+            <div class="form-group">
+                <label>收件人</label>
+                <div id="bulkPreviewTo" class="email-preview-meta"></div>
+            </div>
+            <div class="form-group">
+                <label>主题</label>
+                <div id="bulkPreviewSubject" class="email-preview-subject"></div>
+            </div>
+            <div class="form-group">
+                <label>正文</label>
+                <div id="bulkPreviewBody" class="email-preview-body"></div>
+            </div>
+            <div class="form-actions" style="margin-top:16px;">
+                <button class="btn btn-secondary" id="bulkPreviewCloseBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CSV 导入客户 Modal ===== -->
+    <div id="csvImportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="csvImportClose">&times;</span>
+            <h2>CSV 批量导入客户</h2>
+
+            <div class="csv-import-guide">
+                <p>支持的列名（首行为标题行，<strong>name</strong> 为必填）：</p>
+                <code>name, company, email, phone, country, industry, product_pref, tags, background, status</code>
+                <p style="margin-top:8px;color:var(--gray-500);font-size:0.85rem;">
+                    status 可选值：prospect / active / paused / closed（默认 prospect）<br>
+                    文件编码支持 UTF-8 / UTF-8 BOM / GBK
+                </p>
+                <a id="csvTemplateDownload" href="#" class="csv-template-link" download="customers_template.csv">下载模板 CSV</a>
+            </div>
+
+            <div class="form-group" style="margin-top:16px;">
+                <label for="csvFileInput">选择 CSV 文件</label>
+                <input type="file" id="csvFileInput" accept=".csv">
+            </div>
+
+            <div id="csvImportResult" style="display:none;margin-top:12px;"></div>
+
+            <div class="form-actions" style="margin-top:16px;">
+                <button class="btn btn-secondary" id="csvImportCancelBtn">取消</button>
+                <button class="btn btn-primary" id="csvImportConfirmBtn">开始导入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 邮件模板选择 Modal ===== -->
+    <div id="emailTemplateSelectorModal" class="modal">
+        <div class="modal-content" style="max-width:580px;">
+            <span class="close" id="emailTemplateSelectorClose">&times;</span>
+            <h2>选择邮件模板</h2>
+            <p style="font-size:0.85rem;color:var(--gray-400);margin-bottom:16px;">选择后自动填入邮件主题和正文</p>
+            <div id="emailTemplateSelectorList" style="max-height:420px;overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- ===== 邮件模板新建/编辑 Modal ===== -->
+    <div id="emailTemplateModal" class="modal">
+        <div class="modal-content" style="max-width:620px;">
+            <span class="close" id="emailTemplateModalClose">&times;</span>
+            <h2 id="emailTemplateModalTitle">新建模板</h2>
+            <form id="emailTemplateForm" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="etName">模板名称 *</label>
+                    <input type="text" id="etName" placeholder="例：开发信 · 化工行业">
+                </div>
+                <div class="form-group">
+                    <label for="etDescription">备注说明（可选）</label>
+                    <input type="text" id="etDescription" placeholder="适用场景或备注">
+                </div>
+                <div class="form-group">
+                    <label for="etSubject">邮件主题 *</label>
+                    <div class="et-insert-bar">
+                        <span class="et-insert-label">插入占位符：</span>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{name}}')">{{name}}</button>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{company}}')">{{company}}</button>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{country}}')">{{country}}</button>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{email}}')">{{email}}</button>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{product}}')">{{product}}</button>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{industry}}')">{{industry}}</button>
+                    </div>
+                    <input type="text" id="etSubject" placeholder="例：New Product Introduction - {{company}}">
+                </div>
+                <div class="form-group">
+                    <label for="etBody">邮件正文 *</label>
+                    <div class="et-insert-bar">
+                        <span class="et-insert-label">插入占位符：</span>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{name}}')">{{name}}</button>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{company}}')">{{company}}</button>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{country}}')">{{country}}</button>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{email}}')">{{email}}</button>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{product}}')">{{product}}</button>
+                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{industry}}')">{{industry}}</button>
+                    </div>
+                    <textarea id="etBody" rows="10"
+                        placeholder="Dear {{name}},&#10;&#10;...&#10;&#10;Best regards,&#10;Cecilia"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="saveEmailTemplateBtn" class="btn btn-primary">保存模板</button>
+                    <button type="button" id="cancelEmailTemplateModalBtn" class="btn btn-secondary">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Screenshot Lightbox ===== -->
+    <div id="screenshotLightbox" class="modal" onclick="this.classList.remove('show')">
+        <div onclick="event.stopPropagation()" style="position:relative;max-width:90vw;max-height:90vh;">
+            <img id="screenshotLightboxImg" src="" alt="截图" style="max-width:90vw;max-height:85vh;border-radius:12px;display:block;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+            <span onclick="document.getElementById('screenshotLightbox').classList.remove('show')" style="position:absolute;top:-14px;right:-14px;width:30px;height:30px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;box-shadow:0 2px 8px rgba(0,0,0,0.25);">&times;</span>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
