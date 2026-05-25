@@ -2,134 +2,99 @@
 
 ## 第一次使用
 
-### 1. 获取免费的 Gemini API Key
+### 1. 准备 DeepSeek Token
 
-访问 [Google AI Studio](https://aistudio.google.com/app/apikey)
-- 使用您的 Google 账号登录
-- 点击 "Get API Key" 或 "Create API Key"
-- 复制生成的 API Key
+在 DeepSeek 开放平台创建新的 API Token。Token 与密码等同，不要提交到 Git，也不要发送到聊天或截图中；已泄露的 Token 应立即吊销。
 
-**注意：完全免费，无需信用卡！**
+本项目通过 DeepSeek 官方 Anthropic 兼容接口调用模型：
 
-### 2. 配置 API Key
+```env
+ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+ANTHROPIC_MODEL=deepseek-v4-pro
+```
+
+### 2. 配置应用
 
 复制环境变量示例文件：
+
 ```bash
+# macOS / Linux
+cp .env.example .env
+
+# Windows
 copy .env.example .env
 ```
 
-编辑 `.env` 文件，填入您的 Gemini API Key：
-```
-GEMINI_API_KEY=你的API密钥
+编辑 `.env`：
+
+```env
+ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+ANTHROPIC_AUTH_TOKEN=你的新DeepSeekToken
+ANTHROPIC_MODEL=deepseek-v4-pro
+HOST=127.0.0.1
+PORT=8000
+SESSION_SECRET=请替换为随机长字符串
 ```
 
 ### 3. 启动应用
 
-**Windows 用户**:
 ```bash
+# macOS / Linux
+chmod +x start.sh
+./start.sh
+
+# Windows
 start.bat
 ```
 
-**macOS/Linux 用户**:
-```bash
-chmod +x start.sh
-./start.sh
-```
+也可以手动启动：
 
-**或者手动启动**:
 ```bash
 pip install -r requirements.txt
 python main.py
 ```
 
-### 4. 访问应用
+打开 http://127.0.0.1:8000，首次登录后立即修改默认密码：
 
-打开浏览器访问: http://127.0.0.1:8000
-
-## 使用流程
-
-1. **输入客户内容** - 粘贴客户发送的邮件或消息
-2. **选择场景** - 选择合适的商务场景（询盘、报价等）
-3. **选择语气** - 选择期望的回复语气（专业正式、友好等）
-4. **生成回复** - 点击"生成回复"按钮，等待 5-10 秒
-5. **查看三种格式** - 自动生成中文、英文邮件、企业微信三种格式
-6. **复制使用** - 选择需要的格式，点击复制按钮
+| 用户名 | 密码 | 角色 |
+|--------|------|------|
+| admin | admin | 管理员 |
+| Cecilia | Cecilia | 管理员 |
 
 ## 主要功能
 
-- **智能生成**: 基于 Google Gemini 3 AI 生成专业回复
-- **三种格式**: 中文版本 + 英文邮件 + 企业微信格式
-- **模板管理**: 保存常用场景组合，快速复用
-- **历史记录**: 查看和复用之前生成的回复
-
-## 支持的场景
-
-- 询盘 (Inquiry)
-- 报价 (Quotation)
-- 订单确认 (Order Confirmation)
-- 发货通知 (Shipping Notice)
-- 投诉处理 (Complaint Handling)
-- 催款 (Payment Reminder)
-- 样品申请 (Sample Request)
-- 售后服务 (After-sales Service)
-- 一般交流 (General Communication)
+- 邮件中心：通过 IMAP/SMTP 收发邮件、群发、发送记录和联系统计
+- AI 邮件：生成中英回复、企业微信快捷回复与主动开发/跟进邮件
+- 客户与模板：维护客户档案、批量导入与复用邮件模板
+- 管理后台：用户、角色、页面权限和反馈管理
+- 时光机：纪念日、日程、日记、婚礼清单、预算与时间相册
 
 ## 常见问题
 
-**Q: 如何停止服务器？**
-A: 在终端中按 `Ctrl+C`
+**提示缺少 `ANTHROPIC_AUTH_TOKEN` 怎么办？**
 
-**Q: 忘记 API Key 怎么办？**
-A: 编辑 `.env` 文件重新填入
+确认 `.env` 位于项目根目录、变量名拼写正确，然后重启应用。
 
-**Q: 为什么推荐 Gemini 而不是 ChatGPT？**
-A: Gemini API 完全免费，无需信用卡，质量也很好，非常适合个人使用
+**如何验证 AI 配置？**
 
-**Q: Gemini API 有使用限制吗？**
-A: 有的，每分钟最多 60 次请求，对于个人使用来说完全足够
+配置 `.env` 后运行：
 
-**Q: 数据会丢失吗？**
-A: 所有数据保存在本地 database/trade_email.db 文件中，不会丢失
-
-**Q: 可以在没有网络的情况下使用吗？**
-A: 不可以，生成回复需要调用 Gemini API，必须联网
-
-## 使用示例
-
-**客户消息：**
-```
-Hi, I'm interested in your products. Can you send me a catalog and price list?
+```bash
+python check_models.py
 ```
 
-**选择：**
-- 场景：询盘 (Inquiry)
-- 语气：专业正式 (Professional & Formal)
+脚本会向当前配置的 DeepSeek 模型发送一次极短测试请求。
 
-**生成的回复示例：**
-```
-Dear Customer,
+**能否更换模型？**
 
-Thank you for your interest in our products.
+可以，将 `.env` 中的 `ANTHROPIC_MODEL` 改为 DeepSeek 官方支持的 Anthropic 兼容模型标识后重启服务。
 
-We would be happy to send you our latest catalog and price list.
-Could you please provide your email address and company information?
-This will help us send you the most relevant materials.
+**数据保存在哪里？**
 
-We look forward to the opportunity to work with you.
+业务数据保存在 `database/trade_email.db`，上传图片位于 `static/uploads/`。部署前请做好备份。
 
-Best regards,
-[Your Name]
-```
+**没有网络能否生成邮件？**
 
-## 技术支持
+不可以。AI 生成必须访问 DeepSeek API；客户资料和本地历史数据仍保存在 SQLite 中。
 
-如有问题，请查阅 README.md 获取详细文档。
-
-## 为什么选择外贸沟通助手？
-
-✅ **完全免费** - 使用 Google Gemini API，无需付费
-✅ **简单易用** - 3 步配置，立即使用
-✅ **三种格式** - 中文参考、英文邮件、企业微信一次生成
-✅ **专业质量** - AI 生成的回复专业且地道
-✅ **隐私安全** - 数据存储在本地，不上传到云端
-✅ **快速高效** - 几秒钟生成三种格式供选择
+更多部署说明见 `README.md`，连接异常排查见 `网络问题解决方案.md`。

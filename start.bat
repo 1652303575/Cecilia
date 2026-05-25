@@ -10,7 +10,7 @@ if not exist .env (
     echo.
     echo 请按照以下步骤配置：
     echo 1. 复制 .env.example 为 .env
-    echo 2. 编辑 .env 文件，填入您的 Claude API Key
+    echo 2. 编辑 .env 文件，填入新的 DeepSeek API Token
     echo.
     echo 命令: copy .env.example .env
     echo.

@@ -1,36 +1,33 @@
 import os
-import google.generativeai as genai
+
+from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# 配置代理
-http_proxy = os.getenv("HTTP_PROXY")
-https_proxy = os.getenv("HTTPS_PROXY")
+api_key = os.getenv("ANTHROPIC_AUTH_TOKEN")
+base_url = os.getenv("ANTHROPIC_BASE_URL", "https://api.deepseek.com/anthropic")
+model = os.getenv("ANTHROPIC_MODEL", "deepseek-v4-pro")
 
-if http_proxy:
-    os.environ["HTTP_PROXY"] = http_proxy
-if https_proxy:
-    os.environ["HTTPS_PROXY"] = https_proxy
+if not api_key:
+    raise SystemExit("缺少 ANTHROPIC_AUTH_TOKEN，请先在 .env 中配置新的 DeepSeek Token。")
 
-# 配置 API Key
-api_key = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=api_key)
+print(f"正在验证 DeepSeek Anthropic API：{base_url}")
+print(f"当前模型：{model}")
 
-print("正在获取可用的 Gemini 模型列表...\n")
+client = Anthropic(api_key=api_key, base_url=base_url)
 
 try:
-    models = genai.list_models()
-
-    print("支持 generateContent 的模型：")
-    print("=" * 60)
-
-    for model in models:
-        if 'generateContent' in model.supported_generation_methods:
-            print(f"\n模型名称: {model.name}")
-            print(f"显示名称: {model.display_name}")
-            print(f"描述: {model.description}")
-            print("-" * 60)
-
-except Exception as e:
-    print(f"错误: {e}")
+    response = client.messages.create(
+        model=model,
+        max_tokens=16,
+        messages=[{"role": "user", "content": "Reply with OK only."}],
+        timeout=30,
+    )
+    text = "".join(
+        block.text for block in response.content
+        if getattr(block, "type", None) == "text"
+    ).strip()
+    print(f"连接成功，模型返回：{text}")
+except Exception as exc:
+    raise SystemExit(f"连接失败：{exc}") from exc

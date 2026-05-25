@@ -1,34 +1,46 @@
 import os
-from openai import OpenAI
+from anthropic import Anthropic, APIConnectionError, APITimeoutError, AuthenticationError, RateLimitError
 from dotenv import load_dotenv
 
 load_dotenv()
 
 class EmailGeneratorService:
     def __init__(self):
-        api_key = os.getenv("DASHSCOPE_API_KEY")
+        api_key = os.getenv("ANTHROPIC_AUTH_TOKEN")
         if not api_key:
-            raise ValueError("DASHSCOPE_API_KEY not found in environment variables")
+            raise ValueError("ANTHROPIC_AUTH_TOKEN not found in environment variables")
 
-        self.client = OpenAI(
+        self.client = Anthropic(
             api_key=api_key,
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            base_url=os.getenv("ANTHROPIC_BASE_URL", "https://api.deepseek.com/anthropic"),
         )
-        self.model = "qwen-plus"
+        self.model = os.getenv("ANTHROPIC_MODEL", "deepseek-v4-pro")
 
     def _chat(self, prompt: str) -> str:
         try:
-            response = self.client.chat.completions.create(
+            response = self.client.messages.create(
                 model=self.model,
+                max_tokens=8192,
                 messages=[{"role": "user", "content": prompt}],
                 timeout=60,
             )
-            return response.choices[0].message.content
+            return "".join(
+                block.text for block in response.content
+                if getattr(block, "type", None) == "text"
+            )
+        except APITimeoutError:
+            raise Exception("AI 响应超时，请稍后重试")
+        except AuthenticationError:
+            raise Exception("API 密钥无效或未配置，请检查设置")
+        except RateLimitError:
+            raise Exception("请求过于频繁，请稍后重试")
+        except APIConnectionError:
+            raise Exception("网络连接失败，请检查网络后重试")
         except Exception as e:
             err = str(e).lower()
             if "timeout" in err:
                 raise Exception("AI 响应超时，请稍后重试")
-            if "authentication" in err or "invalid api key" in err or "api_key" in err:
+            if "authentication" in err or "invalid api key" in err or "api_key" in err or "unauthorized" in err:
                 raise Exception("API 密钥无效或未配置，请检查设置")
             if "rate limit" in err or "rate_limit" in err:
                 raise Exception("请求过于频繁，请稍后重试")

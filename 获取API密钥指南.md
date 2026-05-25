@@ -1,150 +1,67 @@
-# 如何获取免费的 Google Gemini API Key
+# 如何配置 DeepSeek API Token
 
-本指南将帮助您快速获取完全免费的 Google Gemini API Key。
+本项目使用 DeepSeek 的 Anthropic 兼容 API，为邮件回复与邮件撰写提供模型能力。
 
-## 为什么选择 Gemini API？
+## 获取与保管 Token
 
-✅ **完全免费** - 无需信用卡
-✅ **注册简单** - 只需 Google 账号
-✅ **配额充足** - 每分钟 60 次请求
-✅ **质量优秀** - Google 最新的 AI 模型
+1. 登录 DeepSeek 开放平台并创建新的 API Token。
+2. 复制 Token 后妥善保存；页面可能不会再次展示完整值。
+3. 不要将 Token 提交到 Git、粘贴到聊天、日志、截图或公开文档中。
+4. 如果 Token 曾经暴露，立即在平台吊销并创建新的 Token。
 
-## 获取步骤（推荐方法）
+DeepSeek 官方 Anthropic 接口说明：<https://api-docs.deepseek.com/guides/anthropic_api>
 
-### 方法 1：Google AI Studio（最简单）
+## 配置应用
 
-1. **访问网站**
-   - 打开 https://aistudio.google.com/app/apikey
-   - 如果链接打不开，可以访问 https://makersuite.google.com/app/apikey
+在项目目录将示例文件复制为 `.env`：
 
-2. **登录账号**
-   - 使用您的 Google 账号登录
-   - 如果没有 Google 账号，先注册一个（Gmail、YouTube 账号都可以）
+```bash
+# macOS / Linux
+cp .env.example .env
 
-3. **创建 API Key**
-   - 点击页面上的 "Get API Key" 或 "Create API Key" 按钮
-   - 如果提示选择项目，可以选择现有项目或创建新项目
-   - 项目名称可以随意填写，如 "TradeEmailGenerator"
+# Windows
+copy .env.example .env
+```
 
-4. **复制 API Key**
-   - API Key 创建成功后会显示在页面上
-   - 点击复制按钮复制 API Key
-   - **重要：请妥善保管这个 API Key，不要分享给他人**
+将新 Token 写入 `.env`：
 
-5. **配置到应用中**
-   - 在项目目录中，将 `.env.example` 复制为 `.env`
-   - 打开 `.env` 文件
-   - 将 `GEMINI_API_KEY=your_api_key_here` 中的 `your_api_key_here` 替换为您复制的 API Key
-   - 保存文件
+```env
+ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+ANTHROPIC_AUTH_TOKEN=你的新DeepSeekToken
+ANTHROPIC_MODEL=deepseek-v4-pro
+HOST=127.0.0.1
+PORT=8000
+SESSION_SECRET=请替换为随机长字符串
+```
 
-## 如果遇到问题
+`ANTHROPIC_MODEL` 可替换为 DeepSeek 官方当前支持的其他 Anthropic 兼容模型标识。不要将界面展示标签或未经确认的后缀作为模型标识。
 
-### 问题 1：无法访问 Google AI Studio
+## 快速验证
 
-**原因：** 可能需要科学上网工具
+安装依赖并执行连接验证：
 
-**解决方法：**
-- 尝试使用 VPN 或代理
-- 或者使用方法 2（Google Cloud Console）
+```bash
+pip install -r requirements.txt
+python check_models.py
+```
 
-### 问题 2：提示 "API Key creation failed"
+验证成功后运行应用：
 
-**解决方法：**
-1. 刷新页面重试
-2. 确保您的 Google 账号已验证（绑定手机号）
-3. 尝试切换浏览器（Chrome 浏览器兼容性最好）
+```bash
+python main.py
+```
 
-### 问题 3：API Key 不工作
+访问 http://127.0.0.1:8000 并尝试生成一封简短回复。
 
-**检查步骤：**
-1. 确认 API Key 已正确复制到 `.env` 文件
-2. 确认 `.env` 文件名称正确（不是 `.env.txt`）
-3. 检查 API Key 前后是否有空格
-4. 重启应用
+## 常见错误
 
-## 方法 2：Google Cloud Console（备用方法）
-
-如果方法 1 无法使用，可以尝试这个方法：
-
-1. **访问 Google Cloud Console**
-   - 打开 https://console.cloud.google.com/
-
-2. **创建或选择项目**
-   - 点击顶部的项目选择器
-   - 点击 "NEW PROJECT" 创建新项目
-   - 输入项目名称（如 "TradeEmailGenerator"）
-   - 点击 "CREATE"
-
-3. **启用 Generative Language API**
-   - 在搜索框搜索 "Generative Language API"
-   - 点击搜索结果中的 "Generative Language API"
-   - 点击 "ENABLE" 启用 API
-
-4. **创建凭据**
-   - 点击左侧菜单 "APIs & Services" > "Credentials"
-   - 点击顶部 "+ CREATE CREDENTIALS"
-   - 选择 "API Key"
-   - 复制生成的 API Key
-
-5. **（可选）限制 API Key**
-   - 点击 API Key 名称进入编辑页面
-   - 在 "API restrictions" 部分选择 "Restrict key"
-   - 选择 "Generative Language API"
-   - 这样可以提高安全性
-
-## API 使用限制
-
-### 免费层级限制：
-- **每分钟请求数（RPM）**: 60 次
-- **每天请求数（RPD）**: 1500 次
-- **每分钟 tokens**: 32,000
-
-对于个人使用来说，这些配额完全足够！
+- `缺少 ANTHROPIC_AUTH_TOKEN`：`.env` 未创建、变量名拼写错误，或启动目录不正确。
+- `API 密钥无效或未配置`：Token 无效、已吊销或被错误复制；创建新 Token 后重试。
+- `请求过于频繁`：等待后重试，或检查账户配额与限流策略。
+- `网络连接失败`：检查服务器出站访问、防火墙或代理设置，详见 `网络问题解决方案.md`。
 
 ## 安全建议
 
-1. **不要分享您的 API Key**
-   - API Key 等同于密码，不要在公开场合分享
-
-2. **不要提交到 Git**
-   - `.env` 文件已经在 `.gitignore` 中
-   - 确保不会意外提交到 GitHub 等平台
-
-3. **定期更换 API Key**
-   - 如果怀疑 API Key 泄露，立即在控制台中删除并创建新的
-
-4. **设置使用提醒**
-   - 可以在 Google Cloud Console 设置使用配额提醒
-   - 虽然是免费的，但了解使用情况有助于优化
-
-## 快速测试
-
-获取 API Key 后，可以快速测试是否可用：
-
-```bash
-# 运行启动脚本
-start.bat  # Windows
-# 或
-./start.sh  # Linux/macOS
-
-# 访问 http://127.0.0.1:8000
-# 尝试生成一个简单的回复
-```
-
-## 需要帮助？
-
-如果按照上述步骤仍然无法获取或使用 API Key，请：
-1. 检查 README.md 中的常见问题部分
-2. 在项目的 GitHub Issues 中提问
-3. 确保您的网络环境可以访问 Google 服务
-
-## 总结
-
-获取 Gemini API Key 非常简单：
-1. 访问 https://aistudio.google.com/app/apikey
-2. 用 Google 账号登录
-3. 点击创建 API Key
-4. 复制到 `.env` 文件
-5. 开始使用！
-
-完全免费，无需信用卡，3 分钟搞定！
+- `.env` 已被 `.gitignore` 排除，仍应在提交前检查 `git status`。
+- 生产环境使用部署平台的环境变量或仅服务器可读的 `.env` 文件。
+- `SESSION_SECRET` 同样应替换为随机长字符串，并与 Token 一起保密。

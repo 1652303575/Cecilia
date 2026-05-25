@@ -1,6 +1,6 @@
 # Cecilia Auto Mail
 
-基于阿里云通义千问 API 的专属外贸邮件助手，帮助外贸业务员快速生成专业回复、主动撰写开发信、管理客户档案、直接收发邮件。
+基于 DeepSeek Anthropic 兼容 API 的专属工作助手，帮助外贸业务员快速生成专业邮件、管理客户与邮箱，并记录个人重要事项。
 
 ## 功能特性
 
@@ -53,11 +53,16 @@
 - 所有用户可自行修改密码
 - 管理员可重置任意用户密码、禁用/启用账号
 
+### 时光机与婚礼筹备
+- 记录纪念日、日程与富文本日记，支持图片上传和农历纪念日换算
+- 管理订婚/婚礼待办、婚礼预算和时间相册
+- 各用户的个人记录独立保存
+
 ## 技术栈
 
 - **后端**: FastAPI + SQLAlchemy + SQLite
 - **前端**: 原生 HTML/CSS/JavaScript（单页应用）
-- **AI**: 阿里云通义千问（qwen-plus，DashScope 兼容接口）
+- **AI**: DeepSeek V4（Anthropic 兼容接口，默认 `deepseek-v4-pro`）
 - **认证**: Starlette SessionMiddleware + passlib[bcrypt]
 
 ## 快速开始
@@ -74,10 +79,12 @@ pip install -r requirements.txt
 copy .env.example .env
 ```
 
-编辑 `.env`，填入 DashScope API Key：
+编辑 `.env`，填入新创建的 DeepSeek Token。不要复用已经发送到聊天、工单或日志中的 Token：
 
 ```env
-DASHSCOPE_API_KEY=your_api_key_here
+ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+ANTHROPIC_AUTH_TOKEN=your_new_deepseek_token_here
+ANTHROPIC_MODEL=deepseek-v4-pro
 HOST=127.0.0.1
 PORT=8000
 SESSION_SECRET=your-random-secret-key
@@ -100,7 +107,7 @@ python main.py
 | 用户名 | 密码 | 角色 |
 |--------|------|------|
 | admin | admin | 管理员（查看所有数据 + 用户管理） |
-| cecilia | cecilia | 普通用户（仅看自己数据） |
+| Cecilia | Cecilia | 管理员 |
 
 > **首次登录后请立即修改密码**（顶栏「改密码」按钮）。
 
@@ -111,7 +118,7 @@ trade-email-generator/
 ├── main.py                  # FastAPI 主应用（所有路由）
 ├── database.py              # ORM 模型 + init_db() + migrate_db()
 ├── schemas.py               # Pydantic 数据模型
-├── email_service.py         # 通义千问 API 集成
+├── email_service.py         # DeepSeek Anthropic API 集成
 ├── email_center_service.py  # SMTP/IMAP 邮件中心服务
 ├── requirements.txt         # Python 依赖
 ├── .env                     # 环境变量（本地，不提交）
@@ -129,9 +136,9 @@ trade-email-generator/
 
 ## 注意事项
 
-- **密码安全**：首次部署后请修改 admin 和 cecilia 的默认密码
+- **密码安全**：首次部署后请修改 `admin` 和 `Cecilia` 的默认密码
 - **SESSION_SECRET**：生产环境请在 `.env` 中设置随机字符串，防止重启后 session 失效
-- **API Key 安全**：`DASHSCOPE_API_KEY` 不要提交到版本控制
+- **Token 安全**：`ANTHROPIC_AUTH_TOKEN` 不要提交到版本控制；一旦暴露请立即吊销并重建
 - **上传文件**：反馈截图存储在 `static/uploads/feedback/`，部署时注意目录权限；Nginx 需配置 `client_max_body_size 20M` 以支持多图上传
 - **生成质量**：输入越完整，生成效果越好；客户档案背景信息越详细，个性化程度越高
 
@@ -193,8 +200,10 @@ pip install -r requirements.txt
 
 # 创建环境变量
 cat > /opt/trade-email-generator/.env << 'EOF'
-DASHSCOPE_API_KEY=你的API密钥
-SECRET_KEY=cecilia-trade-email-secret-2024
+ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+ANTHROPIC_AUTH_TOKEN=你的新DeepSeekToken
+ANTHROPIC_MODEL=deepseek-v4-pro
+SESSION_SECRET=请替换为随机长字符串
 EOF
 ```
 
