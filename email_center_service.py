@@ -51,6 +51,20 @@ def _get_body(msg) -> str:
     return body.strip()
 
 
+
+import re as _re
+
+def _html_to_plain(html: str) -> str:
+    """Strip HTML tags for plain-text fallback in multipart/alternative."""
+    text = _re.sub(r'<br\s*/?>', '\n', html, flags=_re.IGNORECASE)
+    text = _re.sub(r'<p[^>]*>', '\n', text, flags=_re.IGNORECASE)
+    text = _re.sub(r'</p>', '', text, flags=_re.IGNORECASE)
+    text = _re.sub(r'<[^>]+>', '', text)
+    text = text.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+    text = _re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
 # ─────────────────────────────────────────────
 #  SMTP — Send
 # ─────────────────────────────────────────────
@@ -65,13 +79,22 @@ def send_email(
     subject: str,
     body: str,
     attachments: Optional[List[tuple]] = None,  # list of (filename, content_bytes, mime_type)
+    cc_addresses: Optional[List[str]] = None,
+    bcc_addresses: Optional[List[str]] = None,
 ) -> None:
-    """Send an email via SMTP SSL/TLS, optionally with attachments."""
+    """Send an email via SMTP SSL/TLS, optionally with attachments and CC/BCC."""
     msg = MIMEMultipart("mixed")
     msg["From"] = email_address
     msg["To"] = to_address
     msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain", "utf-8"))
+    if cc_addresses:
+        msg["Cc"] = ", ".join(cc_addresses)
+
+    # multipart/alternative: plain text fallback + HTML
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText(_html_to_plain(body), "plain", "utf-8"))
+    alt.attach(MIMEText(body, "html", "utf-8"))
+    msg.attach(alt)
 
     if attachments:
         for filename, file_bytes, mime_type in attachments:
@@ -91,17 +114,20 @@ def send_email(
                 part.add_header("Content-Disposition", "attachment", filename=("utf-8", "", filename))
             msg.attach(part)
 
+    # Build full recipient list for SMTP envelope (To + Cc + Bcc)
+    all_recipients = [to_address] + (cc_addresses or []) + (bcc_addresses or [])
+
     context = ssl.create_default_context()
     if smtp_port == 465:
         with smtplib.SMTP_SSL(smtp_host, smtp_port, context=context, timeout=20) as server:
             server.login(email_address, email_password)
-            server.sendmail(email_address, [to_address], msg.as_string())
+            server.sendmail(email_address, all_recipients, msg.as_string())
     else:
         with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
             server.ehlo()
             server.starttls(context=context)
             server.login(email_address, email_password)
-            server.sendmail(email_address, [to_address], msg.as_string())
+            server.sendmail(email_address, all_recipients, msg.as_string())
 
 
 # ─────────────────────────────────────────────

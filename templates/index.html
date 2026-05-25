@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>👑 Cecilia Auto Mail</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 </head>
 <body>
 
@@ -14,7 +15,7 @@
             <div class="login-crown">👑</div>
             <h1 class="login-title">Cecilia Auto Mail</h1>
             <p class="login-sub">外贸邮件助手</p>
-            <form id="loginForm" class="login-form" action="#" method="post">
+            <form id="loginForm" class="login-form" onsubmit="return false;">
                 <div class="form-group">
                     <label for="loginUsername">用户名</label>
                     <input type="text" id="loginUsername" name="username" placeholder="请输入用户名" autocomplete="username" required>
@@ -113,6 +114,34 @@
                     </button>
                 </div>
 
+                <!-- 一级：时光机 -->
+                <div class="nav-group">
+                    <div class="nav-group-label">
+                        <span class="nav-group-icon">⏳</span> 时光机
+                    </div>
+                    <button class="nav-item" data-page="anniversaries">
+                        <span class="nav-item-icon">💕</span> 纪念日
+                    </button>
+                    <button class="nav-item" data-page="schedules">
+                        <span class="nav-item-icon">📅</span> 日程安排
+                    </button>
+                    <button class="nav-item" data-page="diaries">
+                        <span class="nav-item-icon">📖</span> 日记
+                    </button>
+                    <button class="nav-item" data-page="engagementTodos">
+                        <span class="nav-item-icon">💍</span> 订婚清单
+                    </button>
+                    <button class="nav-item" data-page="weddingTodos">
+                        <span class="nav-item-icon">👰</span> 婚礼清单
+                    </button>
+                    <button class="nav-item" data-page="weddingBudget">
+                        <span class="nav-item-icon">💰</span> 婚礼预算
+                    </button>
+                    <button class="nav-item" data-page="photoAlbum">
+                        <span class="nav-item-icon">📷</span> 时间相册
+                    </button>
+                </div>
+
                 <!-- 一级：其他 -->
                 <div class="nav-group">
                     <div class="nav-group-label">
@@ -129,6 +158,12 @@
                     </button>
                     <button class="nav-item" data-page="userAdmin">
                         <span class="nav-item-icon">👤</span> 用户管理
+                    </button>
+                    <button class="nav-item" data-page="roleAdmin">
+                        <span class="nav-item-icon">🎭</span> 角色管理
+                    </button>
+                    <button class="nav-item" data-page="pagePermAdmin">
+                        <span class="nav-item-icon">🔐</span> 页面授权
                     </button>
                     <button class="nav-item" data-page="guide">
                         <span class="nav-item-icon">📖</span> 使用手册
@@ -389,7 +424,16 @@
                 </div>
                 <div class="page-toolbar search-toolbar">
                     <div class="search-toolbar-main">
-                        <input id="composeHistorySearchQ" type="text" class="search-input" placeholder="搜索关键词（邮件内容 / 类型）">
+                        <input id="composeHistorySearchQ" type="text" class="search-input" placeholder="搜索关键词（邮件内容 / 要求）">
+                        <select id="composeHistorySearchType" class="search-customer-select">
+                            <option value="">全部类型</option>
+                            <option value="开发信">🚀 开发信</option>
+                            <option value="跟进邮件">🔄 跟进邮件</option>
+                            <option value="产品推荐">🎯 产品推荐</option>
+                            <option value="报价跟进">💰 报价跟进</option>
+                            <option value="节后跟进">🎉 节后跟进</option>
+                            <option value="自定义">✏️ 自定义</option>
+                        </select>
                         <select id="composeHistorySearchCustomer" class="search-customer-select">
                             <option value="">全部客户</option>
                         </select>
@@ -598,7 +642,7 @@
                         <ol class="guide-steps">
                             <li>将客户发来的邮件/消息<strong>粘贴</strong>到「客户聊天内容」</li>
                             <li>可选：下拉选择关联的<strong>客户档案</strong>，背景自动带入</li>
-                            <li>选择<strong>场景</strong>和<strong>语气</strong></li>
+                            <li>选择<strong>场景</strong>和<strong>语气</strong>，填写本次特殊要求</li>
                             <li>点击 <strong>「生成回复」</strong>，等待 AI 生成</li>
                             <li>切换三个版本，点击<strong>「复制」</strong>直接使用</li>
                         </ol>
@@ -622,16 +666,18 @@
                             <li><strong>产品推荐</strong> — 向客户推荐新品</li>
                             <li><strong>报价跟进</strong> — 发完报价无回音时</li>
                             <li><strong>节后跟进</strong> — 节假日后重新联系</li>
+                            <li>支持<strong>自定义邮件类型</strong>，点击「+ 自定义」添加</li>
                         </ul>
                     </div>
                     <div class="guide-card guide-card-blue">
                         <div class="guide-card-icon">👥</div>
                         <h3>客户管理</h3>
                         <ul class="guide-list">
-                            <li>创建客户档案：姓名、公司、行业、产品偏好、背景备注</li>
+                            <li>创建客户档案：姓名、公司、国家（下拉选择）、行业（预设18类，默认汽车配件）</li>
                             <li>生成回复/撰写邮件时选择客户，<strong>背景信息自动注入 AI</strong></li>
                             <li>客户详情页查看该客户的<strong>完整往来记录</strong></li>
                             <li>状态分类：潜在 / 活跃 / 暂停 / 已关闭</li>
+                            <li>列表支持<strong>搜索</strong>（名称/公司/邮箱）和<strong>国家筛选</strong>（仅显示库中已有国家）</li>
                             <li>支持 <strong>CSV 批量导入</strong>，可下载模板后填写上传</li>
                         </ul>
                     </div>
@@ -644,7 +690,7 @@
                             <li><strong>产品背景知识</strong> — 仅供 AI 参考，不原样输出</li>
                             <li><strong>联系方式</strong> — 自动带入签名区</li>
                             <li><strong>邮件签名</strong> — 每封英文邮件自动附上</li>
-                            <li><strong>邮箱账号配置</strong> — 配置后开启邮件中心功能</li>
+                            <li><strong>邮箱账号配置</strong> — 配置后开启邮件中心功能（仅管理员可修改）</li>
                         </ul>
                     </div>
                     <div class="guide-card guide-card-green">
@@ -661,13 +707,23 @@
                         <div class="guide-card-icon">📂</div>
                         <h3>历史记录搜索</h3>
                         <ul class="guide-list">
-                            <li>「历史记录」和「撰写记录」页均支持搜索筛选</li>
-                            <li><strong>关键词搜索</strong>：匹配回复内容、标题、场景/类型</li>
-                            <li><strong>客户下拉筛选</strong>：从客户管理自动同步，切换即触发搜索</li>
-                            <li>点击「清除」恢复显示全部记录</li>
+                            <li>「历史记录」和「撰写记录」均支持<strong>关键词搜索</strong>和<strong>客户筛选</strong></li>
+                            <li>所有列表均支持<strong>分页</strong>，每页20条，可翻页浏览</li>
+                            <li>点击「清除」或清空搜索框恢复显示全部</li>
                         </ul>
                     </div>
                     <div class="guide-card guide-card-purple">
+                        <div class="guide-card-icon">👑</div>
+                        <h3>用户管理（管理员）</h3>
+                        <ul class="guide-list">
+                            <li>管理员可在「用户管理」查看所有账号</li>
+                            <li><strong>设为管理员 / 降为普通用户</strong>：直接在列表操作，无需修改数据库</li>
+                            <li><strong>重置密码</strong>：为其他用户设置新密码</li>
+                            <li><strong>禁用 / 启用</strong>账号，被禁用账号立即无法登录</li>
+                            <li>不能对自己执行禁用或降权操作</li>
+                        </ul>
+                    </div>
+                    <div class="guide-card guide-card-green">
                         <div class="guide-card-icon">💬</div>
                         <h3>意见反馈</h3>
                         <ul class="guide-list">
@@ -682,7 +738,7 @@
                 <!-- 邮件中心 -->
                 <div class="guide-scenarios" style="margin-top:24px;">
                     <h3>📮 邮件中心使用说明</h3>
-                    <p style="color:var(--gray-500);margin:8px 0 16px;">使用前需在「全局设置」填写邮箱账号信息并测试连接成功</p>
+                    <p style="color:var(--gray-500);margin:8px 0 16px;">使用前需在「全局设置」填写邮箱账号信息并测试连接成功（需管理员权限配置）</p>
                     <div class="guide-grid" style="margin-top:0">
                         <div class="guide-card guide-card-blue">
                             <div class="guide-card-icon">📥</div>
@@ -696,28 +752,33 @@
                         <div class="guide-card guide-card-purple">
                             <div class="guide-card-icon">📤</div>
                             <h3>发邮件</h3>
-                            <ul class="guide-list">
-                                <li>选择客户后<strong>自动填入对方邮箱</strong></li>
-                                <li>可选择邮件模板，<strong>自动替换</strong> <code>{{name}}</code> <code>{{company}}</code> 等占位符</li>
-                                <li>发送前弹出<strong>预览确认框</strong>，核对无误再发出，防止误发</li>
+                            <ol class="guide-steps">
+                                <li><strong>关联客户（可选）</strong>：按状态/国家/行业筛选，点击客户卡片即可关联，<strong>收件人自动填入</strong></li>
+                                <li><strong>写邮件内容</strong>：加载模板或手动填写收件人、主题、正文；支持抄送/密送</li>
+                                <li><strong>添加附件 &amp; 发送</strong>：拖拽或点击上传附件，点击「发送邮件」弹出预览确认框，核对无误后发出</li>
+                            </ol>
+                            <ul class="guide-list" style="margin-top:8px;">
                                 <li>发送记录自动保存到「发送记录」</li>
+                                <li>支持抄送 / 密送 / 多附件（单个 ≤ 10MB）</li>
                             </ul>
                         </div>
                         <div class="guide-card guide-card-green">
                             <div class="guide-card-icon">📨</div>
                             <h3>群发邮件</h3>
                             <ol class="guide-steps">
-                                <li>编写模板，用 <code>{{name}}</code> <code>{{company}}</code> <code>{{country}}</code> 作为占位符</li>
-                                <li>勾选要发送的客户</li>
-                                <li>预览第一封确认内容，点击<strong>「确认群发」</strong></li>
-                                <li>每封邮件自动替换为该客户的真实信息</li>
+                                <li><strong>选择收件客户</strong>：按状态/国家/行业筛选，勾选要发送的客户</li>
+                                <li><strong>写邮件内容</strong>：用 <code>{{name}}</code> <code>{{company}}</code> <code>{{country}}</code> 等占位符，或加载模板</li>
+                                <li><strong>附件 &amp; 发送</strong>：可上传附件（每封相同），预览第一封确认后点击「确认群发」</li>
                             </ol>
+                            <ul class="guide-list" style="margin-top:8px;">
+                                <li>每封邮件自动替换为该客户的真实信息</li>
+                            </ul>
                         </div>
                         <div class="guide-card guide-card-blue">
                             <div class="guide-card-icon">📋</div>
                             <h3>发送记录 &amp; 联系统计</h3>
                             <ul class="guide-list">
-                                <li><strong>发送记录</strong>：查看所有单发/群发历史，含状态和客户关联</li>
+                                <li><strong>发送记录</strong>：查看所有单发/群发历史，支持搜索和状态筛选</li>
                                 <li><strong>联系统计</strong>：每个客户的互动次数、已发邮件数</li>
                                 <li>距上次联系天数颜色提示：<span style="color:#22c55e">●</span> &lt;14天  <span style="color:#f59e0b">●</span> 15-30天  <span style="color:#ef4444">●</span> &gt;30天</li>
                             </ul>
@@ -745,7 +806,7 @@
                 </div>
 
                 <div class="guide-tip">
-                    💡 <strong>小技巧：</strong>客户消息越完整，生成效果越好。建议完整粘贴客户原始消息，AI 会根据上下文生成更贴切的回复。客户档案填写得越详细，个性化程度越高。批量导入客户时可下载 CSV 模板，按格式填写后一键导入。反馈问题时附上截图（可直接 Ctrl+V 粘贴），定位更快。
+                    💡 <strong>小技巧：</strong>客户消息越完整，生成效果越好。建议完整粘贴客户原始消息，AI 会根据上下文生成更贴切的回复。客户档案填写得越详细，个性化程度越高。批量导入客户时可下载 CSV 模板，按格式填写后一键导入。删除、禁用等危险操作均有二次确认弹窗，不用担心误操作。反馈问题时附上截图（可直接 Ctrl+V 粘贴），定位更快。
                 </div>
             </div>
 
@@ -753,9 +814,37 @@
             <div id="userAdmin" class="page">
                 <div class="page-header">
                     <h2>用户管理</h2>
-                    <p class="page-desc">查看所有账号，重置密码，禁用或启用账号</p>
+                    <p class="page-desc">查看所有账号、新建账号、分配角色、重置密码，禁用或启用账号</p>
+                </div>
+                <div class="page-toolbar">
+                    <button class="btn btn-primary" onclick="openCreateUserModal()">+ 新建账号</button>
                 </div>
                 <div id="userAdminContainer">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+
+            <!-- ===== 角色管理（admin only） ===== -->
+            <div id="roleAdmin" class="page">
+                <div class="page-header">
+                    <h2>🎭 角色管理</h2>
+                    <p class="page-desc">创建角色并配置权限，将角色分配给用户即可批量控制权限</p>
+                </div>
+                <div class="page-toolbar">
+                    <button class="btn btn-primary" onclick="openRoleModal()">+ 新建角色</button>
+                </div>
+                <div id="roleAdminContainer">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+
+            <!-- ===== 页面授权（admin only） ===== -->
+            <div id="pagePermAdmin" class="page">
+                <div class="page-header">
+                    <h2>页面授权</h2>
+                    <p class="page-desc">配置自己的导航偏好，或为普通用户设置可访问的功能页</p>
+                </div>
+                <div id="pagePermAdminContainer">
                     <div class="loading"><div class="spinner"></div></div>
                 </div>
             </div>
@@ -834,49 +923,103 @@
                     <h2>发邮件</h2>
                     <p class="page-desc">直接通过系统发送邮件，发送记录自动存档</p>
                 </div>
-                <div class="form-section" style="max-width:700px;">
-                    <div class="template-load-bar">
-                        <span class="template-load-label">📋 加载模板</span>
-                        <button class="btn btn-secondary btn-sm" onclick="openEmailTemplateSelector('send')">选择模板</button>
+
+                <div class="bulk-workflow">
+                    <!-- Step 1: 选择客户 -->
+                    <div class="bulk-step">
+                        <div class="bulk-step-header">
+                            <span class="bulk-step-num">1</span>
+                            <span class="bulk-step-title">关联客户（可选）</span>
+                        </div>
+                        <div class="page-toolbar">
+                            <select id="sendCustStatusFilter" class="customer-status-filter">
+                                <option value="">全部状态</option>
+                                <option value="prospect">潜在客户</option>
+                                <option value="active">活跃客户</option>
+                                <option value="paused">暂停跟进</option>
+                                <option value="closed">已关闭</option>
+                            </select>
+                            <select id="sendCustCountryFilter" class="customer-status-filter">
+                                <option value="">全部国家</option>
+                            </select>
+                            <select id="sendCustIndustryFilter" class="customer-status-filter">
+                                <option value="">全部行业</option>
+                            </select>
+                            <input type="text" id="sendCustSearchInput" class="search-input" placeholder="搜索姓名、公司、邮箱…" style="flex:1;max-width:220px;">
+                            <button id="sendCustClearBtn" class="btn btn-secondary btn-sm" style="display:none;">✕ 取消关联</button>
+                        </div>
+                        <div id="sendCustomerList" class="bulk-customer-list"></div>
+                        <p class="bulk-selected-count" id="sendCustomerHint"></p>
                     </div>
-                    <div class="form-group customer-selector-group">
-                        <label>关联客户（可选）</label>
-                        <div class="customer-selector-wrap">
-                            <div class="cust-search-wrap" id="sendCustSearchWrap">
-                                <input type="text" id="sendCustSearchInput" class="cust-search-input"
-                                    placeholder="输入客户姓名或公司名搜索…" autocomplete="off">
-                                <button type="button" class="cust-search-clear" id="sendCustSearchClear" style="display:none;" title="清除关联">✕</button>
-                                <div class="cust-search-dropdown" id="sendCustSearchDropdown"></div>
+
+                    <!-- Step 2: 写邮件内容 -->
+                    <div class="bulk-step">
+                        <div class="bulk-step-header">
+                            <span class="bulk-step-num">2</span>
+                            <span class="bulk-step-title">写邮件内容</span>
+                        </div>
+                        <div class="form-section" style="max-width:700px;padding-bottom:0;">
+                            <div style="margin-bottom:12px;">
+                                <button class="btn btn-secondary btn-sm" onclick="openEmailTemplateSelector('send')">📋 加载模板</button>
+                            </div>
+                            <!-- 邮件头部：发件人 / 收件人 / 抄送 / 密送 / 主题 -->
+                            <div class="email-compose-header">
+                                <div class="email-header-row">
+                                    <span class="email-field-label">发件人</span>
+                                    <span class="email-from-display" id="sendFromDisplay">—</span>
+                                </div>
+                                <div class="email-header-row">
+                                    <span class="email-field-label">收件人 <span class="required-star">*</span></span>
+                                    <div class="tag-input-wrap" id="sendToWrap" tabindex="0"></div>
+                                    <div class="cc-bcc-toggle">
+                                        <span class="cc-bcc-btn" id="addCcBtn">抄送</span>
+                                        <span class="cc-bcc-btn" id="addBccBtn">密送</span>
+                                    </div>
+                                </div>
+                                <div class="email-header-row" id="sendCcRow" style="display:none;">
+                                    <span class="email-field-label">抄送</span>
+                                    <div class="tag-input-wrap" id="sendCcWrap" tabindex="0"></div>
+                                </div>
+                                <div class="email-header-row" id="sendBccRow" style="display:none;">
+                                    <span class="email-field-label">密送</span>
+                                    <div class="tag-input-wrap" id="sendBccWrap" tabindex="0"></div>
+                                </div>
+                                <div class="email-header-row">
+                                    <span class="email-field-label">主题 <span class="required-star">*</span></span>
+                                    <input type="text" id="sendSubject" class="email-subject-input" placeholder="请输入邮件主题">
+                                </div>
+                            </div>
+                            <!-- 正文编辑器 -->
+                            <div class="form-group" style="margin-top:0;">
+                                <div id="sendBodyEditor" class="quill-editor-wrap"></div>
+                                <input type="hidden" id="sendBody">
                             </div>
                         </div>
-                        <p class="customer-selector-hint" id="sendCustomerHint" style="display:none;"></p>
                     </div>
-                    <div class="form-group">
-                        <label for="sendToAddress">收件人邮箱 *</label>
-                        <input type="email" id="sendToAddress" placeholder="recipient@example.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="sendSubject">邮件主题 *</label>
-                        <input type="text" id="sendSubject" placeholder="邮件主题" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="sendBody">邮件正文 *</label>
-                        <textarea id="sendBody" rows="12" placeholder="在此输入邮件正文..." required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>附件（可选，支持多个文件，单个不超过 10MB）</label>
-                        <div class="attachment-upload-area" id="attachmentDropZone">
-                            <input type="file" id="sendAttachments" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.zip,.rar,.txt,.csv" style="display:none">
-                            <div class="attachment-placeholder" id="attachmentPlaceholder">
-                                <span>📎 点击选择附件，或将文件拖拽到此处</span>
-                            </div>
-                            <ul class="attachment-list" id="attachmentList"></ul>
+
+                    <!-- Step 3: 附件 & 发送 -->
+                    <div class="bulk-step">
+                        <div class="bulk-step-header">
+                            <span class="bulk-step-num">3</span>
+                            <span class="bulk-step-title">添加附件 &amp; 发送</span>
                         </div>
+                        <div class="form-section" style="max-width:700px;padding-bottom:0;">
+                            <div class="form-group" style="margin-bottom:12px;">
+                                <label>附件（可选，支持多个文件，单个不超过 10MB）</label>
+                                <div class="attachment-upload-area" id="attachmentDropZone">
+                                    <input type="file" id="sendAttachments" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.zip,.rar,.txt,.csv" style="display:none">
+                                    <div class="attachment-placeholder" id="attachmentPlaceholder">
+                                        <span>📎 点击选择附件，或将文件拖拽到此处</span>
+                                    </div>
+                                    <ul class="attachment-list" id="attachmentList"></ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-actions" style="justify-content:flex-start;">
+                            <button id="sendEmailBtn" class="btn btn-primary">发送邮件</button>
+                        </div>
+                        <div id="sendEmailResult" style="display:none; margin-top:16px;"></div>
                     </div>
-                    <div class="form-actions">
-                        <button id="sendEmailBtn" class="btn btn-primary">发送邮件</button>
-                    </div>
-                    <div id="sendEmailResult" style="display:none; margin-top:12px;"></div>
                 </div>
             </div>
 
@@ -888,11 +1031,39 @@
                 </div>
 
                 <div class="bulk-workflow">
-                    <!-- Step 1: 编写模板 -->
+                    <!-- Step 1: 选择收件人 -->
                     <div class="bulk-step">
                         <div class="bulk-step-header">
                             <span class="bulk-step-num">1</span>
-                            <span class="bulk-step-title">编写邮件模板</span>
+                            <span class="bulk-step-title">选择收件客户</span>
+                        </div>
+                        <div class="page-toolbar">
+                            <select id="bulkStatusFilter" class="customer-status-filter">
+                                <option value="">全部状态</option>
+                                <option value="prospect">潜在客户</option>
+                                <option value="active">活跃客户</option>
+                                <option value="paused">暂停跟进</option>
+                                <option value="closed">已关闭</option>
+                            </select>
+                            <select id="bulkCountryFilter" class="customer-status-filter">
+                                <option value="">全部国家</option>
+                            </select>
+                            <select id="bulkIndustryFilter" class="customer-status-filter">
+                                <option value="">全部行业</option>
+                            </select>
+                            <input type="text" id="bulkSearchInput" class="search-input" placeholder="搜索姓名、公司、邮箱…" style="flex:1;max-width:220px;">
+                            <button id="selectAllBulkBtn" class="btn btn-secondary">全选</button>
+                            <button id="deselectAllBulkBtn" class="btn btn-secondary">取消全选</button>
+                        </div>
+                        <div id="bulkCustomerList" class="bulk-customer-list"></div>
+                        <p class="bulk-selected-count" id="bulkSelectedCount">已选 0 位客户</p>
+                    </div>
+
+                    <!-- Step 2: 编写模板 -->
+                    <div class="bulk-step">
+                        <div class="bulk-step-header">
+                            <span class="bulk-step-num">2</span>
+                            <span class="bulk-step-title">写邮件内容</span>
                         </div>
                         <div class="form-section" style="max-width:700px;">
                             <div class="bulk-placeholders-tip">
@@ -915,32 +1086,10 @@
                             </div>
                             <div class="form-group">
                                 <label for="bulkBody">邮件正文</label>
-                                <textarea id="bulkBody" rows="12"
-                                    placeholder="Dear {{name}},&#10;&#10;Hope this email finds you well...&#10;&#10;Best regards,&#10;Cecilia"></textarea>
+                                <div id="bulkBodyEditor" class="quill-editor-wrap"></div>
+                                <input type="hidden" id="bulkBody">
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Step 2: 选择收件人 -->
-                    <div class="bulk-step">
-                        <div class="bulk-step-header">
-                            <span class="bulk-step-num">2</span>
-                            <span class="bulk-step-title">选择收件客户</span>
-                        </div>
-                        <div class="page-toolbar">
-                            <select id="bulkStatusFilter" class="customer-status-filter">
-                                <option value="">全部状态</option>
-                                <option value="prospect">潜在客户</option>
-                                <option value="active">活跃客户</option>
-                                <option value="paused">暂停跟进</option>
-                                <option value="closed">已关闭</option>
-                            </select>
-                            <button id="loadBulkCustomersBtn" class="btn btn-secondary">加载客户列表</button>
-                            <button id="selectAllBulkBtn" class="btn btn-secondary">全选</button>
-                            <button id="deselectAllBulkBtn" class="btn btn-secondary">取消全选</button>
-                        </div>
-                        <div id="bulkCustomerList" class="bulk-customer-list"></div>
-                        <p class="bulk-selected-count" id="bulkSelectedCount">已选 0 位客户</p>
                     </div>
 
                     <!-- Step 3: 预览并发送 -->
@@ -1070,6 +1219,209 @@
             </div>
 
             <!-- 邮件模板选择弹窗占位（实际弹窗在 Modals 区） -->
+
+            <!-- ===== 时光机：纪念日 ===== -->
+            <div id="anniversaries" class="page">
+                <div class="page-header">
+                    <h2>💕 纪念日</h2>
+                    <p class="page-desc">记录每一个重要日子，让爱在时光中永驻</p>
+                </div>
+
+                <!-- 每年循环区块 -->
+                <div id="annYearlySection" style="display:none;">
+                    <div class="ann-section-header">
+                        <span class="ann-section-icon">🗓️</span>
+                        <div>
+                            <div class="ann-section-title">年年都要过</div>
+                            <div class="ann-section-sub">每年循环的重要日子，按到期时间排序</div>
+                        </div>
+                    </div>
+                    <div class="ann-yearly-track" id="annYearlyCards"></div>
+                </div>
+
+                <!-- 工具栏 -->
+                <div class="page-toolbar" style="margin-top:24px;">
+                    <button class="btn btn-primary" onclick="openAnnModal()">+ 添加纪念日</button>
+                    <input type="text" id="annSearch" class="search-input" placeholder="搜索纪念日名称…" style="flex:1;max-width:280px;">
+                    <button class="btn btn-secondary" onclick="loadAnniversaries()">刷新</button>
+                </div>
+
+                <!-- 有年份的列表 -->
+                <div class="ann-section-header" id="annListHeader" style="display:none;margin-bottom:8px;">
+                    <span class="ann-section-icon">📅</span>
+                    <div>
+                        <div class="ann-section-title">所有纪念日</div>
+                        <div class="ann-section-sub">记录每一个珍贵的时刻</div>
+                    </div>
+                </div>
+                <div class="customer-list-info" id="annInfo"></div>
+                <div id="annList"></div>
+                <div class="customer-pagination" id="annPagination"></div>
+            </div>
+
+            <!-- ===== 时光机：日程安排 ===== -->
+            <div id="schedules" class="page">
+                <div class="page-header">
+                    <h2>📅 日程安排</h2>
+                    <p class="page-desc">约会、旅行、证件办理……重要的事都记在这里</p>
+                </div>
+
+                <!-- 工具栏 -->
+                <div class="page-toolbar">
+                    <button class="btn btn-primary" onclick="openSchedModal()">+ 添加日程</button>
+                    <input type="text" id="schedSearch" class="search-input" placeholder="搜索日程名称…" style="flex:1;max-width:280px;">
+                    <select id="schedStatusFilter" style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:0.9rem;background:#fff;cursor:pointer;">
+                        <option value="">全部状态</option>
+                        <option value="pending">⏳ 待进行</option>
+                        <option value="done">✅ 已完成</option>
+                        <option value="cancelled">❌ 已取消</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="loadSchedules()">刷新</button>
+                </div>
+                <div class="customer-list-info" id="schedInfo"></div>
+                <div id="schedList"></div>
+                <div class="customer-pagination" id="schedPagination"></div>
+            </div>
+
+            <!-- ===== 时光机：日记 ===== -->
+            <div id="diaries" class="page">
+                <div class="page-header">
+                    <h2>📖 日记</h2>
+                    <p class="page-desc">记录每一天的心情与故事，让回忆永远留存</p>
+                </div>
+
+                <!-- 工具栏 -->
+                <div class="page-toolbar">
+                    <button class="btn btn-primary" onclick="openDiaryModal()">+ 写日记</button>
+                    <input type="text" id="diarySearch" class="search-input" placeholder="搜索内容、地点…" style="flex:1;max-width:260px;">
+                    <select id="diaryMoodFilter" style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:0.9rem;background:#fff;cursor:pointer;">
+                        <option value="">全部心情</option>
+                        <option value="happy">😄 开心</option>
+                        <option value="sweet">🥰 甜蜜</option>
+                        <option value="touched">🥹 感动</option>
+                        <option value="excited">🎉 期待</option>
+                        <option value="grateful">🙏 感恩</option>
+                        <option value="calm">😌 平静</option>
+                        <option value="sad">😢 难过</option>
+                        <option value="other">💭 其他</option>
+                    </select>
+                    <input type="date" id="diaryDateFrom" style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:0.88rem;" title="开始日期">
+                    <span style="color:var(--gray-400);font-size:0.85rem;">—</span>
+                    <input type="date" id="diaryDateTo" style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:0.88rem;" title="结束日期">
+                    <button class="btn btn-secondary" onclick="loadDiaries(1)">筛选</button>
+                </div>
+                <div class="customer-list-info" id="diaryInfo"></div>
+                <div id="diaryTimeline" class="diary-timeline"></div>
+                <div class="customer-pagination" id="diaryPagination"></div>
+            </div>
+
+            <!-- ===== 订婚清单 ===== -->
+            <div id="engagementTodos" class="page">
+                <div class="page-header">
+                    <h2>💍 订婚清单</h2>
+                    <p class="page-desc">记录订婚准备的每一件大事，一起迎接那个特别的时刻</p>
+                </div>
+                <div class="page-toolbar">
+                    <button class="btn btn-primary" onclick="openWeddingTodoModal('engagement')">+ 添加待办</button>
+                    <input type="text" id="engagementSearch" class="search-input" placeholder="搜索待办项…" style="flex:1;max-width:260px;">
+                    <select id="engagementStatusFilter" style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:0.9rem;background:#fff;cursor:pointer;">
+                        <option value="">全部状态</option>
+                        <option value="todo">未开始</option>
+                        <option value="doing">进行中</option>
+                        <option value="done">已完成</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="loadWeddingTodos('engagement',1)">筛选</button>
+                </div>
+                <div class="customer-list-info" id="engagementInfo"></div>
+                <!-- 进度条 -->
+                <div id="engagementProgress" class="wedding-progress-bar-wrap" style="display:none;"></div>
+                <div id="engagementList" class="wedding-todo-list"></div>
+                <div class="customer-pagination" id="engagementPagination"></div>
+            </div>
+
+            <!-- ===== 婚礼清单 ===== -->
+            <div id="weddingTodos" class="page">
+                <div class="page-header">
+                    <h2>👰 婚礼清单</h2>
+                    <p class="page-desc">婚礼筹备一手掌握，让幸福从容降临</p>
+                </div>
+                <div class="page-toolbar">
+                    <button class="btn btn-primary" onclick="openWeddingTodoModal('wedding')">+ 添加待办</button>
+                    <input type="text" id="weddingSearch" class="search-input" placeholder="搜索待办项…" style="flex:1;max-width:260px;">
+                    <select id="weddingStatusFilter" style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:0.9rem;background:#fff;cursor:pointer;">
+                        <option value="">全部状态</option>
+                        <option value="todo">未开始</option>
+                        <option value="doing">进行中</option>
+                        <option value="done">已完成</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="loadWeddingTodos('wedding',1)">筛选</button>
+                </div>
+                <div class="customer-list-info" id="weddingInfo"></div>
+                <div id="weddingProgress" class="wedding-progress-bar-wrap" style="display:none;"></div>
+                <div id="weddingList" class="wedding-todo-list"></div>
+                <div class="customer-pagination" id="weddingPagination"></div>
+            </div>
+
+            <!-- ===== 婚礼预算 ===== -->
+            <div id="weddingBudget" class="page">
+                <div class="page-header">
+                    <h2>💰 婚礼预算</h2>
+                    <p class="page-desc">清晰掌握每一笔开销，让幸福不超支</p>
+                </div>
+
+                <!-- 总览卡片 -->
+                <div id="budgetSummaryCards" class="budget-summary-cards"></div>
+
+                <!-- 分类进度条 -->
+                <div id="budgetCategoryChart" class="budget-category-chart"></div>
+
+                <!-- 工具栏 -->
+                <div class="page-toolbar" style="margin-top:20px;">
+                    <button class="btn btn-primary" onclick="openBudgetModal()">+ 添加预算项</button>
+                    <input type="text" id="budgetSearch" class="search-input" placeholder="搜索项目/商家…" style="flex:1;max-width:260px;">
+                    <select id="budgetCategoryFilter" style="padding:8px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:0.9rem;background:#fff;cursor:pointer;">
+                        <option value="">全部分类</option>
+                        <option value="场地">场地</option>
+                        <option value="婚纱礼服">婚纱礼服</option>
+                        <option value="摄影摄像">摄影摄像</option>
+                        <option value="婚宴酒席">婚宴酒席</option>
+                        <option value="酒水饮料">酒水饮料</option>
+                        <option value="花艺布置">花艺布置</option>
+                        <option value="婚车">婚车</option>
+                        <option value="蜜月旅行">蜜月旅行</option>
+                        <option value="婚戒珠宝">婚戒珠宝</option>
+                        <option value="司仪主持">司仪主持</option>
+                        <option value="化妆造型">化妆造型</option>
+                        <option value="喜糖伴手礼">喜糖伴手礼</option>
+                        <option value="其他">其他</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="loadBudget(1)">筛选</button>
+                </div>
+                <div class="customer-list-info" id="budgetInfo"></div>
+                <div id="budgetList" class="budget-item-list"></div>
+                <div class="customer-pagination" id="budgetPagination"></div>
+            </div>
+
+            <!-- ===== 时间相册 ===== -->
+            <div id="photoAlbum" class="page">
+                <div class="page-header">
+                    <h2>📷 时间相册</h2>
+                    <p class="page-desc">沿着时间轴，让每一张照片都成为最美的回忆</p>
+                </div>
+
+                <div class="page-toolbar">
+                    <button class="btn btn-primary" onclick="openPhotoAlbumModal()">+ 新建相册</button>
+                    <input type="text" id="photoSearch" class="search-input" placeholder="搜索标题/地点/标签…" style="flex:1;max-width:260px;">
+                    <input type="date" id="photoDateFrom" style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:0.88rem;background:#fff;" title="开始日期">
+                    <span style="color:var(--gray-400);font-size:0.85rem;">至</span>
+                    <input type="date" id="photoDateTo" style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:0.88rem;background:#fff;" title="结束日期">
+                    <button class="btn btn-secondary" onclick="loadPhotoAlbum(1)">筛选</button>
+                </div>
+
+                <div class="customer-list-info" id="photoInfo"></div>
+                <div id="photoTimeline"></div>
+                <div class="customer-pagination" id="photoPagination"></div>
+            </div>
 
         </main>
     </div><!-- /.app-layout -->
@@ -1238,12 +1590,10 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="customerCountryInput">国家/地区</label>
-                        <div class="country-combobox" id="customerCountryCombobox">
-                            <input type="text" id="customerCountryInput" class="form-input"
-                                placeholder="输入或选择国家…" autocomplete="off">
-                            <div class="country-dropdown" id="customerCountryDropdown"></div>
-                        </div>
+                        <label for="customerCountry">国家/地区</label>
+                        <select id="customerCountry">
+                            <option value="">-- 请选择 --</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="customerStatus">合作状态</label>
@@ -1258,7 +1608,27 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="customerIndustry">行业</label>
-                        <input type="text" id="customerIndustry" placeholder="例：家居、电子、服装">
+                        <select id="customerIndustry">
+                            <option value="">-- 请选择 --</option>
+                            <option value="家居家装">家居家装</option>
+                            <option value="电子电器">电子电器</option>
+                            <option value="服装纺织">服装纺织</option>
+                            <option value="机械设备">机械设备</option>
+                            <option value="化工原料">化工原料</option>
+                            <option value="食品农业">食品农业</option>
+                            <option value="汽车配件" selected>汽车配件</option>
+                            <option value="医疗器械">医疗器械</option>
+                            <option value="建筑材料">建筑材料</option>
+                            <option value="灯具照明">灯具照明</option>
+                            <option value="玩具礼品">玩具礼品</option>
+                            <option value="五金工具">五金工具</option>
+                            <option value="包装印刷">包装印刷</option>
+                            <option value="体育用品">体育用品</option>
+                            <option value="美容个护">美容个护</option>
+                            <option value="新能源">新能源</option>
+                            <option value="贸易分销">贸易分销</option>
+                            <option value="其他">其他</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="customerProductPref">产品偏好</label>
@@ -1323,6 +1693,97 @@
         </div>
     </div>
 
+    <!-- ===== 新建账号 Modal ===== -->
+    <div id="createUserModal" class="modal">
+        <div class="modal-content" style="max-width:460px;">
+            <span class="close" id="createUserModalClose">&times;</span>
+            <h2 style="margin:0 0 20px;">新建账号</h2>
+            <form id="createUserForm">
+                <div class="form-group">
+                    <label>用户名 <span style="color:red;">*</span></label>
+                    <input type="text" id="newUsername" placeholder="4-20个字符" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>密码 <span style="color:red;">*</span></label>
+                    <input type="password" id="newPassword" placeholder="至少4位" required autocomplete="new-password">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div class="form-group">
+                        <label>系统角色</label>
+                        <select id="newUserRole">
+                            <option value="user">普通用户</option>
+                            <option value="admin">管理员</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>分配角色 <span style="font-size:0.78rem;color:var(--gray-400);">（权限模板）</span></label>
+                        <select id="newUserRoleId">
+                            <option value="">不分配角色</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="createUserError" class="login-error" style="display:none;"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="createUserCancelBtn">取消</button>
+                    <button type="submit" class="btn btn-primary" id="createUserSaveBtn">创建账号</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== 角色 Modal（创建/编辑） ===== -->
+    <div id="roleModal" class="modal">
+        <div class="modal-content" style="max-width:560px;">
+            <span class="close" id="roleModalClose">&times;</span>
+            <h2 id="roleModalTitle" style="margin:0 0 20px;">新建角色</h2>
+            <form id="roleForm">
+                <input type="hidden" id="roleId">
+                <div class="form-group">
+                    <label>角色名 <span style="color:red;">*</span></label>
+                    <input type="text" id="roleName" placeholder="例如：销售员、运营、客服…" required>
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <input type="text" id="roleDesc" placeholder="简短描述这个角色的职责">
+                </div>
+                <div class="form-group">
+                    <label style="margin-bottom:10px;display:block;">可访问的页面权限</label>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:0.88rem;color:var(--gray-600);cursor:pointer;margin-bottom:12px;">
+                        <input type="checkbox" id="rolePermAllCheck" style="accent-color:var(--primary);width:15px;height:15px;">
+                        <span>全部允许（不限制页面）</span>
+                    </label>
+                    <div id="rolePermGroups" style="display:flex;flex-direction:column;gap:14px;max-height:320px;overflow-y:auto;padding-right:4px;"></div>
+                </div>
+                <div id="roleModalError" class="login-error" style="display:none;"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="roleModalCancelBtn">取消</button>
+                    <button type="submit" class="btn btn-primary" id="roleModalSaveBtn">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== 为用户分配角色 Modal ===== -->
+    <div id="assignRoleModal" class="modal">
+        <div class="modal-content" style="max-width:400px;">
+            <span class="close" id="assignRoleModalClose">&times;</span>
+            <h2 style="margin:0 0 6px;">分配角色</h2>
+            <p id="assignRoleDesc" style="color:var(--gray-500);margin:0 0 20px;font-size:0.9rem;"></p>
+            <input type="hidden" id="assignRoleUserId">
+            <div class="form-group">
+                <label>选择角色</label>
+                <select id="assignRoleSelect">
+                    <option value="">不分配角色（使用独立权限配置）</option>
+                </select>
+            </div>
+            <p style="font-size:0.82rem;color:var(--gray-400);margin:0 0 20px;line-height:1.5;">分配角色后，用户将继承该角色的页面权限。如需为该用户单独配置权限，请在「页面授权」中设置，单独配置会覆盖角色权限。</p>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="assignRoleCancelBtn">取消</button>
+                <button type="button" class="btn btn-primary" id="assignRoleSaveBtn">保存</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== 重置他人密码 Modal ===== -->
     <div id="resetPasswordModal" class="modal">
         <div class="modal-content" style="max-width:380px;">
@@ -1364,6 +1825,14 @@
             <div class="form-group">
                 <label>收件人</label>
                 <div id="sendPreviewTo" class="email-preview-meta"></div>
+            </div>
+            <div class="form-group" id="sendPreviewCcRow" style="display:none;">
+                <label>抄送</label>
+                <div id="sendPreviewCc" class="email-preview-meta"></div>
+            </div>
+            <div class="form-group" id="sendPreviewBccRow" style="display:none;">
+                <label>密送</label>
+                <div id="sendPreviewBcc" class="email-preview-meta"></div>
             </div>
             <div class="form-group">
                 <label>主题</label>
@@ -1449,59 +1918,720 @@
 
     <!-- ===== 邮件模板新建/编辑 Modal ===== -->
     <div id="emailTemplateModal" class="modal">
-        <div class="modal-content" style="max-width:620px;">
-            <span class="close" id="emailTemplateModalClose">&times;</span>
-            <h2 id="emailTemplateModalTitle">新建模板</h2>
-            <form id="emailTemplateForm" onsubmit="return false;">
-                <div class="form-group">
-                    <label for="etName">模板名称 *</label>
-                    <input type="text" id="etName" placeholder="例：开发信 · 化工行业">
-                </div>
-                <div class="form-group">
-                    <label for="etDescription">备注说明（可选）</label>
-                    <input type="text" id="etDescription" placeholder="适用场景或备注">
-                </div>
-                <div class="form-group">
-                    <label for="etSubject">邮件主题 *</label>
-                    <div class="et-insert-bar">
-                        <span class="et-insert-label">插入占位符：</span>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{name}}')">{{name}}</button>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{company}}')">{{company}}</button>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{country}}')">{{country}}</button>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{email}}')">{{email}}</button>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{product}}')">{{product}}</button>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etSubject','{{industry}}')">{{industry}}</button>
+        <div class="modal-content" style="max-width:1100px;width:96vw;height:90vh;display:flex;flex-direction:column;padding:24px 28px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-shrink:0;">
+                <h2 id="emailTemplateModalTitle" style="margin:0;font-size:1.15rem;">新建模板</h2>
+                <span class="close" id="emailTemplateModalClose">&times;</span>
+            </div>
+            <form id="emailTemplateForm" onsubmit="return false;" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;gap:12px;min-height:0;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group" style="margin:0;">
+                        <label for="etName">模板名称 *</label>
+                        <input type="text" id="etName" placeholder="例：开发信 · 化工行业">
                     </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="etDescription">备注说明（可选）</label>
+                        <input type="text" id="etDescription" placeholder="适用场景或备注">
+                    </div>
+                </div>
+                <!-- 共用占位符栏 -->
+                <div class="et-insert-bar" style="margin:0;padding:7px 10px;background:var(--primary-light);border:1.5px solid #d0d6f9;border-radius:var(--radius);flex-shrink:0;">
+                    <span class="et-insert-label">📌 占位符：</span>
+                    <button type="button" class="et-chip" onclick="insertPlaceholderFocused('{{name}}')">{{name}}</button>
+                    <button type="button" class="et-chip" onclick="insertPlaceholderFocused('{{company}}')">{{company}}</button>
+                    <button type="button" class="et-chip" onclick="insertPlaceholderFocused('{{country}}')">{{country}}</button>
+                    <button type="button" class="et-chip" onclick="insertPlaceholderFocused('{{email}}')">{{email}}</button>
+                    <button type="button" class="et-chip" onclick="insertPlaceholderFocused('{{product}}')">{{product}}</button>
+                    <button type="button" class="et-chip" onclick="insertPlaceholderFocused('{{industry}}')">{{industry}}</button>
+                </div>
+                <div class="form-group" style="margin:0;flex-shrink:0;">
+                    <label for="etSubject">邮件主题 *</label>
                     <input type="text" id="etSubject" placeholder="例：New Product Introduction - {{company}}">
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin:0;flex:1;display:flex;flex-direction:column;min-height:0;">
                     <label for="etBody">邮件正文 *</label>
-                    <div class="et-insert-bar">
-                        <span class="et-insert-label">插入占位符：</span>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{name}}')">{{name}}</button>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{company}}')">{{company}}</button>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{country}}')">{{country}}</button>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{email}}')">{{email}}</button>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{product}}')">{{product}}</button>
-                        <button type="button" class="et-chip" onclick="insertPlaceholder('etBody','{{industry}}')">{{industry}}</button>
-                    </div>
-                    <textarea id="etBody" rows="10"
-                        placeholder="Dear {{name}},&#10;&#10;...&#10;&#10;Best regards,&#10;Cecilia"></textarea>
+                    <div id="etBodyEditor" class="quill-editor-wrap" style="flex:1;min-height:0;"></div>
+                    <input type="hidden" id="etBody">
                 </div>
-                <div class="form-actions">
-                    <button type="button" id="saveEmailTemplateBtn" class="btn btn-primary">保存模板</button>
+                <div class="form-actions" style="flex-shrink:0;margin:4px 0 0;">
                     <button type="button" id="cancelEmailTemplateModalBtn" class="btn btn-secondary">取消</button>
+                    <button type="button" id="saveEmailTemplateBtn" class="btn btn-primary">保存模板</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ===== Screenshot Lightbox ===== -->
+    <!-- ===== 纪念日 Modal ===== -->
+    <div id="annModal" class="modal">
+        <div class="modal-content tm-modal-content">
+            <!-- 彩色头部 -->
+            <div class="tm-modal-header tm-modal-header-ann">
+                <span class="tm-modal-header-icon">💕</span>
+                <div>
+                    <h2 id="annModalTitle" class="tm-modal-title">添加纪念日</h2>
+                    <p class="tm-modal-subtitle">记录每一个珍贵的日子</p>
+                </div>
+                <span class="close tm-modal-close" id="annModalClose">&times;</span>
+            </div>
+            <form id="annForm" class="tm-modal-body">
+                <input type="hidden" id="annId">
+                <!-- 标题 -->
+                <div class="form-group">
+                    <label class="tm-label">标题 <span class="tm-required">*</span></label>
+                    <input type="text" id="annTitle" class="tm-input" placeholder="例如：我们相识的那一天" required>
+                </div>
+                <!-- 日期 -->
+                <div class="form-group">
+                    <label class="tm-label">日期 <span class="tm-required">*</span></label>
+                    <!-- 农历/公历切换 -->
+                    <div class="ann-calendar-toggle">
+                        <button type="button" class="ann-cal-btn active" id="annCalSolar" onclick="_switchAnnCalendar('solar')">公历</button>
+                        <button type="button" class="ann-cal-btn" id="annCalLunar" onclick="_switchAnnCalendar('lunar')">农历</button>
+                    </div>
+                    <div class="ann-date-row" id="annDateRow">
+                        <select id="annYear" class="ann-date-select" style="flex:1.4;"></select>
+                        <select id="annMonth" class="ann-date-select">
+                            <option value="">月</option>
+                            <option value="01">1月</option><option value="02">2月</option>
+                            <option value="03">3月</option><option value="04">4月</option>
+                            <option value="05">5月</option><option value="06">6月</option>
+                            <option value="07">7月</option><option value="08">8月</option>
+                            <option value="09">9月</option><option value="10">10月</option>
+                            <option value="11">11月</option><option value="12">12月</option>
+                        </select>
+                        <select id="annDay" class="ann-date-select">
+                            <option value="">日</option>
+                        </select>
+                    </div>
+                    <!-- 农历专属：闰月选项 -->
+                    <div id="annLeapRow" style="display:none;margin-top:6px;">
+                        <label style="font-size:0.83rem;color:var(--gray-600);display:flex;align-items:center;gap:6px;cursor:pointer;">
+                            <input type="checkbox" id="annIsLeapMonth"> 闰月
+                        </label>
+                    </div>
+                    <div class="ann-date-hint" id="annDateHint"></div>
+                    <input type="hidden" id="annDate">
+                    <input type="hidden" id="annIsLunar" value="0">
+                </div>
+                <!-- 类型 -->
+                <div class="form-group">
+                    <label class="tm-label">类型</label>
+                    <div class="tm-type-grid" id="annTypeGrid">
+<!--                        <button type="button" class="tm-type-btn" data-value="anniversary">💕 在一起</button>-->
+<!--                        <button type="button" class="tm-type-btn" data-value="proposal">💍 求婚</button>-->
+<!--                        <button type="button" class="tm-type-btn" data-value="wedding">👰 结婚</button>-->
+<!--                        <button type="button" class="tm-type-btn" data-value="firstmeet">🌸 初次见面</button>-->
+                         <button type="button" class="tm-type-btn" data-value="birthday">🎂 生日</button>
+                        <button type="button" class="tm-type-btn" data-value="holiday">🎉 节日</button>
+                        <button type="button" class="tm-type-btn" data-value="travel">✈️ 旅行</button>
+                        <button type="button" class="tm-type-btn" data-value="custom">⭐ 自定义</button>
+                    </div>
+                    <!-- 自定义类型名称输入框，仅选中「自定义」时显示 -->
+                    <div id="annCustomTypeGroup" style="display:none;margin-top:10px;">
+                        <input type="text" id="annCustomTypeLabel" class="tm-input"
+                            placeholder="输入自定义类型名称，例如：第一次牵手" maxlength="20">
+                    </div>
+                    <input type="hidden" id="annType" value="anniversary">
+                </div>
+                <!-- 图标 -->
+                <div class="form-group">
+                    <label class="tm-label">图标</label>
+                    <div class="tm-emoji-picker">
+                        <div class="tm-emoji-grid">
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">💕</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">💍</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">👰</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">🎂</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">🌸</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">✈️</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">🎉</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">🥂</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">🌙</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">🌹</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">🎈</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">💫</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">🏖️</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">🌈</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('annEmoji',this)">⭐</span>
+                            <span class="tm-emoji-opt tm-emoji-clear" onclick="setEmoji('annEmoji',null)">✕</span>
+                        </div>
+                        <input type="text" id="annEmoji" class="tm-emoji-input" placeholder="自定义…" maxlength="4">
+                    </div>
+                </div>
+                <!-- 心情 -->
+                <div class="form-group">
+                    <label class="tm-label">心情</label>
+                    <div class="ann-mood-row" id="annMoodRow">
+                        <button type="button" class="ann-mood-btn" data-mood="😍" title="超开心">😍</button>
+                        <button type="button" class="ann-mood-btn" data-mood="😊" title="开心">😊</button>
+                        <button type="button" class="ann-mood-btn" data-mood="🥰" title="甜蜜">🥰</button>
+                        <button type="button" class="ann-mood-btn" data-mood="😢" title="感动">😢</button>
+                        <button type="button" class="ann-mood-btn" data-mood="🥺" title="想念">🥺</button>
+                        <button type="button" class="ann-mood-btn" data-mood="😌" title="平静">😌</button>
+                        <button type="button" class="ann-mood-btn" data-mood="🎉" title="庆祝">🎉</button>
+                        <button type="button" class="ann-mood-btn" data-mood="💪" title="加油">💪</button>
+                    </div>
+                    <input type="hidden" id="annMood">
+                </div>
+                <!-- 备注 -->
+                <div class="form-group">
+                    <div class="ann-note-header">
+                        <label class="tm-label" style="margin-bottom:0;">备注</label>
+                        <div class="ann-note-toolbar">
+                            <button type="button" class="ann-tb-btn" data-cmd="bold" title="加粗"><b>B</b></button>
+                            <button type="button" class="ann-tb-btn" data-cmd="italic" title="斜体"><i>I</i></button>
+                            <button type="button" class="ann-tb-btn" data-cmd="insertUnorderedList" title="列表">≡</button>
+                        </div>
+                        <span class="ann-note-count"><span id="annNoteCount">0</span> / 500</span>
+                    </div>
+                    <div id="annNote" class="ann-note-editor" contenteditable="true" data-placeholder="写点什么…"></div>
+                </div>
+                <!-- 图片 -->
+                <div class="form-group" id="annImagesGroup" style="display:none;">
+                    <label class="tm-label">图片 <span style="font-size:0.78rem;color:var(--gray-400);">最多3张</span></label>
+                    <div class="ann-images-preview" id="annImagesPreview"></div>
+                    <label class="ann-upload-btn" id="annUploadLabel">
+                        <input type="file" id="annImageFile" accept="image/*" style="display:none;">
+                        + 添加图片
+                    </label>
+                </div>
+                <!-- 操作按钮 -->
+                <div class="tm-modal-actions">
+                    <button type="button" class="btn btn-secondary" id="annCancelBtn">取消</button>
+                    <button type="submit" class="btn btn-primary" id="annSaveBtn">保存纪念日</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== 日程 Modal ===== -->
+    <div id="schedModal" class="modal">
+        <div class="modal-content tm-modal-content">
+            <!-- 彩色头部 -->
+            <div class="tm-modal-header tm-modal-header-sched">
+                <span class="tm-modal-header-icon">📅</span>
+                <div>
+                    <h2 id="schedModalTitle" class="tm-modal-title">添加日程</h2>
+                    <p class="tm-modal-subtitle">安排每一段美好时光</p>
+                </div>
+                <span class="close tm-modal-close" id="schedModalClose">&times;</span>
+            </div>
+            <form id="schedForm" class="tm-modal-body">
+                <input type="hidden" id="schedId">
+                <!-- 标题 -->
+                <div class="form-group">
+                    <label class="tm-label">标题 <span class="tm-required">*</span></label>
+                    <input type="text" id="schedTitle" class="tm-input" placeholder="例如：去看电影 🎬" required>
+                </div>
+                <!-- 日期 + 时间 -->
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label class="tm-label">日期 <span class="tm-required">*</span></label>
+                        <div class="ann-date-row">
+                            <select id="schedYear" class="ann-date-select" style="flex:1.4;"></select>
+                            <select id="schedMonth" class="ann-date-select">
+                                <option value="">月</option>
+                                <option value="01">1月</option><option value="02">2月</option>
+                                <option value="03">3月</option><option value="04">4月</option>
+                                <option value="05">5月</option><option value="06">6月</option>
+                                <option value="07">7月</option><option value="08">8月</option>
+                                <option value="09">9月</option><option value="10">10月</option>
+                                <option value="11">11月</option><option value="12">12月</option>
+                            </select>
+                            <select id="schedDay" class="ann-date-select">
+                                <option value="">日</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="schedDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="tm-label">时间（可选）</label>
+                        <div class="ann-date-row">
+                            <select id="schedHour" class="ann-date-select">
+                                <option value="">时</option>
+                            </select>
+                            <select id="schedMinute" class="ann-date-select">
+                                <option value="">分</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="schedTime">
+                    </div>
+                </div>
+                <!-- 结束日期 + 优先级 -->
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label class="tm-label">结束日期（可选）</label>
+                        <div class="ann-date-row">
+                            <select id="schedEndYear" class="ann-date-select" style="flex:1.4;"></select>
+                            <select id="schedEndMonth" class="ann-date-select">
+                                <option value="">月</option>
+                                <option value="01">1月</option><option value="02">2月</option>
+                                <option value="03">3月</option><option value="04">4月</option>
+                                <option value="05">5月</option><option value="06">6月</option>
+                                <option value="07">7月</option><option value="08">8月</option>
+                                <option value="09">9月</option><option value="10">10月</option>
+                                <option value="11">11月</option><option value="12">12月</option>
+                            </select>
+                            <select id="schedEndDay" class="ann-date-select">
+                                <option value="">日</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="schedEndDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="tm-label">优先级</label>
+                        <select id="schedPriority" class="tm-input">
+                            <option value="normal">🔵 普通</option>
+                            <option value="urgent">🔴 紧急</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- 类型 -->
+                <div class="form-group">
+                    <label class="tm-label">类型</label>
+                    <div class="tm-type-grid" id="schedTypeGrid">
+                        <button type="button" class="tm-type-btn" data-value="date">💑 约会</button>
+                        <button type="button" class="tm-type-btn" data-value="travel">✈️ 旅行</button>
+                        <button type="button" class="tm-type-btn" data-value="medical">🏥 看诊</button>
+                        <button type="button" class="tm-type-btn" data-value="document">📄 证件办理</button>
+                        <button type="button" class="tm-type-btn" data-value="shopping">🛍️ 购物</button>
+                        <button type="button" class="tm-type-btn" data-value="dining">🍽️ 餐厅</button>
+                        <button type="button" class="tm-type-btn" data-value="movie">🎬 电影/演出</button>
+                        <button type="button" class="tm-type-btn" data-value="errand">📋 事务</button>
+                        <button type="button" class="tm-type-btn" data-value="other">📌 其他</button>
+                    </div>
+                    <input type="hidden" id="schedType" value="date">
+                </div>
+                <!-- 状态 -->
+                <div class="form-group">
+                    <label class="tm-label">状态</label>
+                    <select id="schedStatus" class="tm-input">
+                        <option value="pending">⏳ 待进行</option>
+                        <option value="done">✅ 已完成</option>
+                        <option value="cancelled">❌ 已取消</option>
+                    </select>
+                </div>
+                <!-- 图标 -->
+                <div class="form-group">
+                    <label class="tm-label">图标</label>
+                    <div class="tm-emoji-picker">
+                        <div class="tm-emoji-grid">
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">💑</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">✈️</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">🏥</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">🎬</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">🍽️</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">🛍️</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">📄</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">🎡</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">⛷️</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">🏖️</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">🎊</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">💐</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">🎁</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">🚗</span>
+                            <span class="tm-emoji-opt" onclick="setEmoji('schedEmoji',this)">📋</span>
+                            <span class="tm-emoji-opt tm-emoji-clear" onclick="setEmoji('schedEmoji',null)">✕</span>
+                        </div>
+                        <input type="text" id="schedEmoji" class="tm-emoji-input" placeholder="自定义…" maxlength="4">
+                    </div>
+                </div>
+                <!-- 备注 -->
+                <div class="form-group">
+                    <div class="ann-note-header">
+                        <label class="tm-label" style="margin-bottom:0;">备注</label>
+                        <div class="ann-note-toolbar">
+                            <button type="button" class="ann-tb-btn" data-cmd="bold" title="加粗"><b>B</b></button>
+                            <button type="button" class="ann-tb-btn" data-cmd="italic" title="斜体"><i>I</i></button>
+                            <button type="button" class="ann-tb-btn" data-cmd="insertUnorderedList" title="列表">≡</button>
+                        </div>
+                        <span class="ann-note-count"><span id="schedNoteCount">0</span> / 500</span>
+                    </div>
+                    <div id="schedNote" class="ann-note-editor" contenteditable="true" data-placeholder="写点什么…"></div>
+                </div>
+                <!-- 图片 -->
+                <div class="form-group" id="schedImagesGroup" style="display:none;">
+                    <label class="tm-label">图片 <span style="font-size:0.78rem;color:var(--gray-400);">最多5张</span></label>
+                    <div class="ann-images-preview" id="schedImagesPreview"></div>
+                    <label class="ann-upload-btn" id="schedUploadLabel">
+                        <input type="file" id="schedImageFile" accept="image/*" style="display:none;">
+                        + 添加图片
+                    </label>
+                </div>
+                <!-- 操作按钮 -->
+                <div class="tm-modal-actions">
+                    <button type="button" class="btn btn-secondary" id="schedCancelBtn">取消</button>
+                    <button type="submit" class="btn btn-primary" id="schedSaveBtn">保存日程</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== 日记 Modal ===== -->
+    <div id="diaryModal" class="modal">
+        <div class="modal-content tm-modal-content">
+            <!-- 彩色头部 -->
+            <div class="tm-modal-header tm-modal-header-diary">
+                <span class="tm-modal-header-icon">📖</span>
+                <div>
+                    <h2 id="diaryModalTitle" class="tm-modal-title">写日记</h2>
+                    <p class="tm-modal-subtitle">记录今天最真实的心情</p>
+                </div>
+                <span class="close tm-modal-close" id="diaryModalClose">&times;</span>
+            </div>
+            <form id="diaryForm" class="tm-modal-body">
+                <input type="hidden" id="diaryId">
+                <!-- 日期 + 天气 -->
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label class="tm-label">日期 <span class="tm-required">*</span></label>
+                        <div class="ann-date-row">
+                            <select id="diaryYear" class="ann-date-select" style="flex:1.4;"></select>
+                            <select id="diaryMonth" class="ann-date-select">
+                                <option value="">月</option>
+                                <option value="01">1月</option><option value="02">2月</option>
+                                <option value="03">3月</option><option value="04">4月</option>
+                                <option value="05">5月</option><option value="06">6月</option>
+                                <option value="07">7月</option><option value="08">8月</option>
+                                <option value="09">9月</option><option value="10">10月</option>
+                                <option value="11">11月</option><option value="12">12月</option>
+                            </select>
+                            <select id="diaryDay" class="ann-date-select">
+                                <option value="">日</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="diaryDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="tm-label">天气</label>
+                        <div class="diary-weather-row" id="diaryWeatherRow">
+                            <button type="button" class="diary-weather-btn" data-val="☀️" title="晴天">☀️</button>
+                            <button type="button" class="diary-weather-btn" data-val="⛅" title="多云">⛅</button>
+                            <button type="button" class="diary-weather-btn" data-val="🌧️" title="下雨">🌧️</button>
+                            <button type="button" class="diary-weather-btn" data-val="⛈️" title="雷雨">⛈️</button>
+                            <button type="button" class="diary-weather-btn" data-val="❄️" title="下雪">❄️</button>
+                            <button type="button" class="diary-weather-btn" data-val="🌈" title="彩虹">🌈</button>
+                            <button type="button" class="diary-weather-btn" data-val="🌙" title="夜晚">🌙</button>
+                        </div>
+                        <input type="hidden" id="diaryWeather">
+                    </div>
+                </div>
+                <!-- 标题 -->
+                <div class="form-group">
+                    <label class="tm-label">标题（可选）</label>
+                    <input type="text" id="diaryTitle" class="tm-input" placeholder="留空则以日期命名">
+                </div>
+                <!-- 心情 -->
+                <div class="form-group">
+                    <label class="tm-label">心情</label>
+                    <div class="diary-mood-row" id="diaryMoodRow">
+                        <button type="button" class="diary-mood-btn" data-mood="happy">😄 开心</button>
+                        <button type="button" class="diary-mood-btn" data-mood="sweet">🥰 甜蜜</button>
+                        <button type="button" class="diary-mood-btn" data-mood="touched">🥹 感动</button>
+                        <button type="button" class="diary-mood-btn" data-mood="excited">🎉 期待</button>
+                        <button type="button" class="diary-mood-btn" data-mood="grateful">🙏 感恩</button>
+                        <button type="button" class="diary-mood-btn" data-mood="calm">😌 平静</button>
+                        <button type="button" class="diary-mood-btn" data-mood="sad">😢 难过</button>
+                        <button type="button" class="diary-mood-btn" data-mood="other">💭 其他</button>
+                    </div>
+                    <input type="hidden" id="diaryMood">
+                </div>
+                <!-- 地点 -->
+                <div class="form-group">
+                    <label class="tm-label">地点</label>
+                    <input type="text" id="diaryLocation" class="tm-input" placeholder="在哪里发生的？">
+                </div>
+                <!-- 正文 -->
+                <div class="form-group">
+                    <div class="ann-note-header">
+                        <label class="tm-label" style="margin-bottom:0;">内容 <span class="tm-required">*</span></label>
+                        <div class="ann-note-toolbar">
+                            <button type="button" class="ann-tb-btn" data-cmd="bold" title="加粗"><b>B</b></button>
+                            <button type="button" class="ann-tb-btn" data-cmd="italic" title="斜体"><i>I</i></button>
+                            <button type="button" class="ann-tb-btn" data-cmd="insertUnorderedList" title="列表">≡</button>
+                        </div>
+                        <span class="ann-note-count"><span id="diaryContentCount">0</span> / 5000</span>
+                    </div>
+                    <div id="diaryContent" class="ann-note-editor diary-content-editor" contenteditable="true" data-placeholder="今天发生了什么…"></div>
+                </div>
+                <!-- 图片 -->
+                <div class="form-group" id="diaryImagesGroup">
+                    <label class="tm-label">图片 <span style="font-size:0.78rem;color:var(--gray-400);">最多9张</span></label>
+                    <div class="diary-img-grid" id="diaryImagesPreview"></div>
+                    <input type="file" id="diaryImageFile" accept="image/*" multiple style="display:none;">
+                </div>
+                <!-- 操作按钮 -->
+                <div class="tm-modal-actions">
+                    <button type="button" class="btn btn-secondary" id="diaryCancelBtn">取消</button>
+                    <button type="submit" class="btn btn-primary" id="diarySaveBtn">保存日记</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== 婚礼/订婚 清单 Modal ===== -->
+    <div id="weddingTodoModal" class="modal">
+        <div class="modal-content" style="max-width:520px;">
+            <span class="close" id="weddingTodoModalClose">&times;</span>
+            <h2 id="weddingTodoModalTitle" style="margin:0 0 20px;">添加待办</h2>
+            <form id="weddingTodoForm">
+                <input type="hidden" id="weddingTodoId">
+                <input type="hidden" id="weddingTodoListType">
+                <div class="form-group">
+                    <label>待办事项 <span style="color:red;">*</span></label>
+                    <input type="text" id="weddingTodoTitle" placeholder="例如：预订婚纱、选定场地…" required>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div class="form-group">
+                        <label>分类</label>
+                        <input type="text" id="weddingTodoCategory" placeholder="例如：礼服、场地、摄影…">
+                    </div>
+                    <div class="form-group">
+                        <label>负责人</label>
+                        <input type="text" id="weddingTodoAssignee" placeholder="例如：Cecilia、两人一起…">
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                    <div class="form-group">
+                        <label>状态</label>
+                        <select id="weddingTodoStatus">
+                            <option value="todo">未开始</option>
+                            <option value="doing">进行中</option>
+                            <option value="done">已完成</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>优先级</label>
+                        <select id="weddingTodoPriority">
+                            <option value="normal">普通</option>
+                            <option value="urgent">紧急</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>截止日期</label>
+                        <input type="date" id="weddingTodoDueDate">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea id="weddingTodoNote" rows="3" placeholder="补充说明…" style="resize:vertical;"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="weddingTodoCancelBtn">取消</button>
+                    <button type="submit" class="btn btn-primary" id="weddingTodoSaveBtn">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== 婚礼预算 Modal ===== -->
+    <div id="budgetModal" class="modal">
+        <div class="modal-content" style="max-width:540px;">
+            <span class="close" id="budgetModalClose">&times;</span>
+            <h2 id="budgetModalTitle" style="margin:0 0 20px;">添加预算项</h2>
+            <form id="budgetForm">
+                <input type="hidden" id="budgetItemId">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div class="form-group">
+                        <label>分类 <span style="color:red;">*</span></label>
+                        <select id="budgetCategory" required>
+                            <option value="">请选择分类</option>
+                            <option value="场地">场地</option>
+                            <option value="婚纱礼服">婚纱礼服</option>
+                            <option value="摄影摄像">摄影摄像</option>
+                            <option value="婚宴酒席">婚宴酒席</option>
+                            <option value="酒水饮料">酒水饮料</option>
+                            <option value="花艺布置">花艺布置</option>
+                            <option value="婚车">婚车</option>
+                            <option value="蜜月旅行">蜜月旅行</option>
+                            <option value="婚戒珠宝">婚戒珠宝</option>
+                            <option value="司仪主持">司仪主持</option>
+                            <option value="化妆造型">化妆造型</option>
+                            <option value="喜糖伴手礼">喜糖伴手礼</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>项目名称 <span style="color:red;">*</span></label>
+                        <input type="text" id="budgetItemName" placeholder="例如：婚纱定制" required>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                    <div class="form-group">
+                        <label>预算金额（元）</label>
+                        <input type="number" id="budgetAmount" placeholder="0" min="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label>实际花费（元）</label>
+                        <input type="number" id="budgetActual" placeholder="未填则为空" min="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label>支付状态</label>
+                        <select id="budgetPaidStatus">
+                            <option value="unpaid">未支付</option>
+                            <option value="partial">部分付款</option>
+                            <option value="paid">已付清</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>供应商/商家</label>
+                    <input type="text" id="budgetVendor" placeholder="例如：XX婚纱摄影">
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea id="budgetNote" rows="2" placeholder="补充说明…" style="resize:vertical;"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="budgetCancelBtn">取消</button>
+                    <button type="submit" class="btn btn-primary" id="budgetSaveBtn">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
     <div id="screenshotLightbox" class="modal" onclick="this.classList.remove('show')">
         <div onclick="event.stopPropagation()" style="position:relative;max-width:90vw;max-height:90vh;">
             <img id="screenshotLightboxImg" src="" alt="截图" style="max-width:90vw;max-height:85vh;border-radius:12px;display:block;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
             <span onclick="document.getElementById('screenshotLightbox').classList.remove('show')" style="position:absolute;top:-14px;right:-14px;width:30px;height:30px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;box-shadow:0 2px 8px rgba(0,0,0,0.25);">&times;</span>
         </div>
+    </div>
+
+    <!-- ===== 通用确认 Modal ===== -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content" style="max-width:400px;">
+            <h3 id="confirmModalTitle" style="margin:0 0 12px;font-size:1.05rem;"></h3>
+            <p id="confirmModalMessage" style="color:var(--gray-500);margin:0 0 24px;line-height:1.6;font-size:0.95rem;"></p>
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="confirmModalCancel">取消</button>
+                <button class="btn btn-danger" id="confirmModalOk">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 页面权限 Modal ===== -->
+    <div id="pagePermModal" class="modal">
+        <div class="modal-content" style="max-width:520px;">
+            <span class="close" id="pagePermClose">&times;</span>
+            <h2 style="margin:0 0 4px;">页面权限</h2>
+            <p id="pagePermDesc" style="color:var(--gray-500);margin:0 0 20px;font-size:0.9rem;"></p>
+            <input type="hidden" id="pagePermUserId">
+            <div style="margin-bottom:16px;">
+                <label style="display:flex;align-items:center;gap:8px;font-size:0.88rem;color:var(--gray-600);cursor:pointer;">
+                    <input type="checkbox" id="pagePermAllCheck" style="accent-color:var(--primary);width:15px;height:15px;">
+                    <span>全部允许（恢复默认，不限制页面）</span>
+                </label>
+            </div>
+            <div id="pagePermGroups" style="display:flex;flex-direction:column;gap:16px;max-height:360px;overflow-y:auto;padding-right:4px;"></div>
+            <div class="form-actions" style="margin-top:24px;">
+                <button type="button" class="btn btn-secondary" id="pagePermCancel">取消</button>
+                <button type="button" class="btn btn-primary" id="pagePermSave">保存权限</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+
+    <!-- ===== 时间相册 Modal ===== -->
+    <div id="photoAlbumModal" class="modal">
+        <div class="modal-content tm-modal-content">
+            <div class="tm-modal-header tm-modal-header-photo">
+                <span class="tm-modal-header-icon">📷</span>
+                <div>
+                    <h2 id="photoAlbumModalTitle" class="tm-modal-title">新建相册</h2>
+                    <p class="tm-modal-subtitle">记录美好瞬间，时光永不老去</p>
+                </div>
+                <span class="close tm-modal-close" id="photoAlbumModalClose">&times;</span>
+            </div>
+            <form id="photoAlbumForm" class="tm-modal-body">
+                <input type="hidden" id="photoAlbumId">
+
+                <!-- 日期 + 标题 -->
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label class="tm-label">拍摄日期 <span class="tm-required">*</span></label>
+                        <div class="ann-date-row">
+                            <select id="photoYear" class="ann-date-select" style="flex:1.4;"></select>
+                            <select id="photoMonth" class="ann-date-select">
+                                <option value="">月</option>
+                                <option value="01">1月</option><option value="02">2月</option>
+                                <option value="03">3月</option><option value="04">4月</option>
+                                <option value="05">5月</option><option value="06">6月</option>
+                                <option value="07">7月</option><option value="08">8月</option>
+                                <option value="09">9月</option><option value="10">10月</option>
+                                <option value="11">11月</option><option value="12">12月</option>
+                            </select>
+                            <select id="photoDay" class="ann-date-select">
+                                <option value="">日</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="photoAlbumDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="tm-label">地点</label>
+                        <input type="text" id="photoAlbumLocation" class="tm-input" placeholder="北京 / 海边 / 家…">
+                    </div>
+                </div>
+
+                <!-- 标题 -->
+                <div class="form-group">
+                    <label class="tm-label">标题（可选）</label>
+                    <input type="text" id="photoAlbumTitle" class="tm-input" placeholder="给这组照片起个名字…">
+                </div>
+
+                <!-- 心情 -->
+                <div class="form-group">
+                    <label class="tm-label">心情</label>
+                    <div class="diary-mood-row" id="photoMoodBtns">
+                        <button type="button" class="photo-mood-btn" data-mood="😊">😊 开心</button>
+                        <button type="button" class="photo-mood-btn" data-mood="🥰">🥰 甜蜜</button>
+                        <button type="button" class="photo-mood-btn" data-mood="😍">😍 惊喜</button>
+                        <button type="button" class="photo-mood-btn" data-mood="🤩">🤩 兴奋</button>
+                        <button type="button" class="photo-mood-btn" data-mood="😌">😌 平静</button>
+                        <button type="button" class="photo-mood-btn" data-mood="🥹">🥹 感动</button>
+                    </div>
+                    <input type="hidden" id="photoAlbumMood">
+                </div>
+
+                <!-- 标签 -->
+                <div class="form-group">
+                    <label class="tm-label">标签 <span style="font-size:0.78rem;color:var(--gray-400);">逗号分隔</span></label>
+                    <input type="text" id="photoAlbumTags" class="tm-input" placeholder="旅行, 风景, 美食…">
+                </div>
+
+                <!-- 描述 -->
+                <div class="form-group">
+                    <label class="tm-label">描述</label>
+                    <textarea id="photoAlbumDesc" class="tm-input" rows="2" placeholder="这一天发生了什么…" style="resize:vertical;min-height:60px;"></textarea>
+                </div>
+
+                <!-- 图片上传区（新建后可见） -->
+                <div id="photoUploadSection" class="form-group" style="display:none;">
+                    <label class="tm-label">照片 <span style="font-size:0.78rem;color:var(--gray-400);">最多30张</span></label>
+                    <div id="photoImagesPreview" class="photo-images-grid"></div>
+                    <label class="photo-upload-btn" style="margin-top:8px;display:inline-flex;">
+                        <input type="file" id="photoUploadInput" accept="image/*" multiple style="display:none;">
+                        <span>📁 选择照片上传</span>
+                    </label>
+                    <div id="photoUploadProgress" style="font-size:0.82rem;color:var(--gray-500);margin-top:6px;min-height:18px;"></div>
+                </div>
+
+                <div class="tm-modal-actions">
+                    <button type="button" class="btn btn-secondary" id="photoAlbumModalCancel">取消</button>
+                    <button type="submit" class="btn btn-primary" id="photoAlbumModalSave">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== 时间相册：图片灯箱 ===== -->
+    <div id="photoLightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;">
+        <button onclick="closeLightbox()" style="position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:2rem;cursor:pointer;line-height:1;">×</button>
+        <button id="lbPrev" onclick="lightboxNav(-1)" style="position:absolute;left:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:2rem;cursor:pointer;padding:8px 14px;border-radius:8px;line-height:1;">‹</button>
+        <img id="lbImg" src="" style="max-width:90vw;max-height:88vh;border-radius:8px;object-fit:contain;" alt="">
+        <div id="lbCounter" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);color:#fff;font-size:0.9rem;background:rgba(0,0,0,0.4);padding:4px 14px;border-radius:20px;"></div>
+        <button id="lbNext" onclick="lightboxNav(1)" style="position:absolute;right:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:2rem;cursor:pointer;padding:8px 14px;border-radius:8px;line-height:1;">›</button>
     </div>
 
     <script src="/static/app.js"></script>

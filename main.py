@@ -10,12 +10,13 @@ import secrets
 import os
 import csv
 import io
-from datetime import datetime
+from datetime import datetime, date
 
 from database import (
     get_db, init_db,
     User, EmailHistory, Template, GlobalSettings, Feedback,
     ComposeHistory, ComposeTemplate, Customer, SentEmailLog, EmailTemplate,
+    Anniversary, Schedule, Diary, WeddingTodo, WeddingBudget, Role, PhotoAlbum,
 )
 from schemas import (
     LoginRequest,
@@ -28,10 +29,19 @@ from schemas import (
     ComposeTemplateCreate, ComposeTemplateResponse,
     CustomerCreate, CustomerUpdate, CustomerResponse, CustomerHistoryItem,
     ChangePasswordRequest, UserResponse, UserAdminUpdate, AdminResetPasswordRequest,
+    AdminCreateUserRequest,
     UserProfileUpdate, UserProfileResponse,
     SendEmailRequest, BulkSendRequest, SentEmailLogResponse,
     InboxEmailItem, CustomerEmailItem,
     EmailTemplateCreate, EmailTemplateUpdate, EmailTemplateResponse,
+    PagedResponse,
+    AnniversaryCreate, AnniversaryUpdate, AnniversaryResponse,
+    ScheduleCreate, ScheduleUpdate, ScheduleResponse,
+    DiaryCreate, DiaryUpdate, DiaryResponse,
+    WeddingTodoCreate, WeddingTodoUpdate, WeddingTodoResponse,
+    WeddingBudgetCreate, WeddingBudgetUpdate, WeddingBudgetResponse, WeddingBudgetSummary,
+    RoleCreate, RoleUpdate, RoleResponse,
+    PhotoAlbumCreate, PhotoAlbumUpdate, PhotoAlbumResponse,
 )
 from email_service import EmailGeneratorService
 import uuid
@@ -93,6 +103,15 @@ def _user_filter(query, model, current_user: User):
     return query
 
 
+def _paginate(query, page: int, page_size: int):
+    """Apply pagination to a SQLAlchemy query. Returns (items, total, total_pages)."""
+    total = query.count()
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = min(max(1, page), total_pages)
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return items, total, page, total_pages
+
+
 def _build_customer_background(cust: Customer) -> Optional[str]:
     if not cust:
         return None
@@ -124,7 +143,7 @@ async def login(body: LoginRequest, request: Request, db: Session = Depends(get_
     if not user.is_active:
         raise HTTPException(status_code=403, detail="账号已被禁用，请联系管理员")
     request.session["user_id"] = user.id
-    return {"username": user.username, "role": user.role}
+    return {"username": user.username, "role": user.role, "page_permissions": _resolve_permissions(user, db)}
 
 
 @app.post("/api/logout")
@@ -134,8 +153,27 @@ async def logout(request: Request):
 
 
 @app.get("/api/me")
-async def get_me(current_user: User = Depends(get_current_user)):
-    return {"username": current_user.username, "role": current_user.role}
+async def get_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return {"username": current_user.username, "role": current_user.role,
+            "page_permissions": _resolve_permissions(current_user, db)}
+
+
+def _resolve_permissions(user: User, db: Session):
+    """Return effective page_permissions string:
+    - admin → None (no restriction)
+    - user with own page_permissions set → use that
+    - user with role_id → inherit role permissions
+    - otherwise → None (all allowed)
+    """
+    if user.role == "admin":
+        return None
+    if user.page_permissions is not None:
+        return user.page_permissions
+    if user.role_id:
+        role = db.query(Role).filter(Role.id == user.role_id).first()
+        if role and role.permissions is not None:
+            return role.permissions
+    return None
 
 
 @app.post("/api/me/password")
@@ -214,7 +252,55 @@ async def list_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    return db.query(User).order_by(User.created_at).all()
+    import json as _json
+    users = db.query(User).order_by(User.created_at).all()
+    # 构建角色 id→name 映射
+    role_map = {r.id: r.name for r in db.query(Role).all()}
+    result = []
+    for u in users:
+        d = UserResponse.model_validate(u)
+        d.role_name = role_map.get(u.role_id)
+        # 若用户分配了角色且没有单独权限，则继承角色权限
+        if u.role_id and not u.page_permissions:
+            role_obj = db.query(Role).filter(Role.id == u.role_id).first()
+            if role_obj:
+                d.page_permissions = role_obj.permissions
+        result.append(d)
+    return result
+
+
+@app.post("/api/admin/users", response_model=UserResponse, status_code=201)
+async def create_user(
+    body: AdminCreateUserRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    if db.query(User).filter(User.username == body.username).first():
+        raise HTTPException(status_code=400, detail="用户名已存在")
+    if len(body.password) < 4:
+        raise HTTPException(status_code=400, detail="密码至少需要4位")
+    if body.role not in ("admin", "user"):
+        raise HTTPException(status_code=400, detail="角色值无效")
+    role_id = body.role_id
+    if role_id:
+        role_obj = db.query(Role).filter(Role.id == role_id).first()
+        if not role_obj:
+            raise HTTPException(status_code=400, detail="指定的角色不存在")
+    new_user = User(
+        username=body.username,
+        password_hash=pwd_context.hash(body.password),
+        role=body.role,
+        role_id=role_id,
+        is_active=1,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    d = UserResponse.model_validate(new_user)
+    if role_id:
+        role_obj = db.query(Role).filter(Role.id == role_id).first()
+        d.role_name = role_obj.name if role_obj else None
+    return d
 
 
 @app.patch("/api/admin/users/{user_id}", response_model=UserResponse)
@@ -229,11 +315,27 @@ async def update_user(
         raise HTTPException(status_code=404, detail="用户不存在")
     if user.id == current_user.id and body.is_active == 0:
         raise HTTPException(status_code=400, detail="不能禁用自己的账号")
-    for key, value in body.model_dump(exclude_unset=True).items():
+    if user.id == current_user.id and body.role == "user":
+        raise HTTPException(status_code=400, detail="不能降低自己的权限")
+    if body.role and body.role not in ("admin", "user"):
+        raise HTTPException(status_code=400, detail="角色值无效，只能是 admin 或 user")
+    update_data = body.model_dump(exclude_unset=True)
+    # role_id = -1 表示清除角色
+    if "role_id" in update_data:
+        if update_data["role_id"] == -1:
+            update_data["role_id"] = None
+        elif update_data["role_id"] is not None:
+            role_obj = db.query(Role).filter(Role.id == update_data["role_id"]).first()
+            if not role_obj:
+                raise HTTPException(status_code=400, detail="指定角色不存在")
+    for key, value in update_data.items():
         setattr(user, key, value)
     db.commit()
     db.refresh(user)
-    return user
+    d = UserResponse.model_validate(user)
+    role_map = {r.id: r.name for r in db.query(Role).all()}
+    d.role_name = role_map.get(user.role_id)
+    return d
 
 
 @app.post("/api/admin/users/{user_id}/reset-password")
@@ -251,6 +353,131 @@ async def admin_reset_password(
     user.password_hash = pwd_context.hash(body.new_password)
     db.commit()
     return {"message": f"已重置 {user.username} 的密码"}
+
+
+# Pages that can be toggled per-user (validated server-side)
+_KNOWN_PERMISSIONABLE = {
+    "emailInbox", "emailSend", "emailBulk", "emailSentLog", "contactStats",
+    "emailTemplates", "generator", "history", "templates", "compose",
+    "composeHistory", "composeTemplates", "customers", "settings", "feedback",
+    "anniversaries", "schedules", "diaries",
+    "engagementTodos", "weddingTodos", "weddingBudget", "photoAlbum",
+}
+
+
+@app.get("/api/admin/users/{user_id}/permissions")
+async def get_user_permissions(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return {"user_id": user_id, "username": user.username, "page_permissions": user.page_permissions}
+
+
+@app.put("/api/admin/users/{user_id}/permissions")
+async def set_user_permissions(
+    user_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    import json
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    if user.role == "admin":
+        raise HTTPException(status_code=400, detail="管理员不受页面权限限制")
+    permissions = body.get("page_permissions")
+    if permissions is None:
+        user.page_permissions = None   # NULL = all non-admin pages allowed
+    else:
+        if not isinstance(permissions, list):
+            raise HTTPException(status_code=422, detail="page_permissions 必须是数组或 null")
+        valid = [p for p in permissions if p in _KNOWN_PERMISSIONABLE]
+        user.page_permissions = json.dumps(valid, ensure_ascii=False)
+    db.commit()
+    return {"user_id": user_id, "page_permissions": user.page_permissions}
+
+
+# ===== Role Management =====
+
+@app.get("/api/admin/roles", response_model=List[RoleResponse])
+def list_roles(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    return db.query(Role).order_by(Role.created_at).all()
+
+
+@app.post("/api/admin/roles", response_model=RoleResponse, status_code=201)
+def create_role(
+    body: RoleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    import json
+    if db.query(Role).filter(Role.name == body.name).first():
+        raise HTTPException(status_code=400, detail="角色名已存在")
+    perm = body.permissions
+    if perm is not None:
+        try:
+            arr = json.loads(perm)
+            valid = [p for p in arr if p in _KNOWN_PERMISSIONABLE]
+            perm = json.dumps(valid, ensure_ascii=False)
+        except Exception:
+            raise HTTPException(status_code=422, detail="permissions 格式错误")
+    record = Role(name=body.name, description=body.description, permissions=perm)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.patch("/api/admin/roles/{role_id}", response_model=RoleResponse)
+def update_role(
+    role_id: int, body: RoleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    import json
+    record = db.query(Role).filter(Role.id == role_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="角色不存在")
+    updates = body.model_dump(exclude_unset=True)
+    if "name" in updates and updates["name"] != record.name:
+        if db.query(Role).filter(Role.name == updates["name"]).first():
+            raise HTTPException(status_code=400, detail="角色名已存在")
+    if "permissions" in updates and updates["permissions"] is not None:
+        try:
+            arr = json.loads(updates["permissions"])
+            valid = [p for p in arr if p in _KNOWN_PERMISSIONABLE]
+            updates["permissions"] = json.dumps(valid, ensure_ascii=False)
+        except Exception:
+            raise HTTPException(status_code=422, detail="permissions 格式错误")
+    for k, v in updates.items():
+        setattr(record, k, v)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.delete("/api/admin/roles/{role_id}")
+def delete_role(
+    role_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    record = db.query(Role).filter(Role.id == role_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="角色不存在")
+    # 解除该角色下所有用户的绑定
+    db.query(User).filter(User.role_id == role_id).update({"role_id": None})
+    db.delete(record)
+    db.commit()
+    return {"message": "已删除"}
 
 
 # ===== Email Generation =====
@@ -314,8 +541,7 @@ async def get_history(
         kw = f"%{q}%"
         query = query.filter(
             EmailHistory.generated_reply.ilike(kw) |
-            EmailHistory.original_email.ilike(kw) |
-            EmailHistory.title.ilike(kw) |
+            EmailHistory.chat_content.ilike(kw) |
             EmailHistory.scenario.ilike(kw)
         )
     history = query.limit(limit).all()
@@ -372,14 +598,21 @@ async def create_template(
     return new_template
 
 
-@app.get("/api/templates", response_model=List[TemplateResponse])
+@app.get("/api/templates")
 async def get_templates(
+    page: int = 1,
+    page_size: int = 20,
+    search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     q = db.query(Template).order_by(Template.created_at.desc())
     q = _user_filter(q, Template, current_user)
-    return q.all()
+    if search:
+        kw = f"%{search}%"
+        q = q.filter(Template.name.ilike(kw) | Template.scenario.ilike(kw) | Template.description.ilike(kw))
+    items, total, page, total_pages = _paginate(q, page, page_size)
+    return {"items": [TemplateResponse.model_validate(t) for t in items], "total": total, "page": page, "page_size": page_size, "total_pages": total_pages}
 
 
 @app.delete("/api/templates/{template_id}")
@@ -418,7 +651,7 @@ async def get_settings(
 async def update_settings(
     settings_data: GlobalSettingsUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     settings = db.query(GlobalSettings).first()
     if not settings:
@@ -502,12 +735,22 @@ async def create_feedback(
     return new_feedback
 
 
-@app.get("/api/feedback", response_model=List[FeedbackResponse])
+@app.get("/api/feedback")
 async def get_feedback(
+    page: int = 1,
+    page_size: int = 20,
+    search: Optional[str] = None,
+    status_filter: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    return db.query(Feedback).order_by(Feedback.created_at.desc()).limit(100).all()
+    q = db.query(Feedback).order_by(Feedback.created_at.desc())
+    if search:
+        q = q.filter(Feedback.content.ilike(f"%{search}%"))
+    if status_filter:
+        q = q.filter(Feedback.status == status_filter)
+    items, total, page, total_pages = _paginate(q, page, page_size)
+    return {"items": [FeedbackResponse.model_validate(f) for f in items], "total": total, "page": page, "page_size": page_size, "total_pages": total_pages}
 
 
 @app.patch("/api/feedback/{feedback_id}/status", response_model=FeedbackResponse)
@@ -763,9 +1006,24 @@ async def import_customers_csv(
     return {"imported": imported, "skipped": skipped, "errors": errors}
 
 
-@app.get("/api/customers", response_model=List[CustomerResponse])
+@app.get("/api/customers/countries")
+async def list_customer_countries(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return distinct non-null countries from this user's customers, sorted."""
+    q = db.query(Customer.country).filter(Customer.country != None, Customer.country != "")
+    q = _user_filter(q, Customer, current_user)
+    rows = q.distinct().all()
+    return sorted([r[0] for r in rows])
+
+
+@app.get("/api/customers")
 async def list_customers(
     status: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -773,7 +1031,16 @@ async def list_customers(
     q = _user_filter(q, Customer, current_user)
     if status:
         q = q.filter(Customer.status == status)
-    return q.all()
+    if search:
+        kw = f"%{search}%"
+        q = q.filter(
+            Customer.name.ilike(kw) |
+            Customer.company.ilike(kw) |
+            Customer.email.ilike(kw) |
+            Customer.country.ilike(kw)
+        )
+    items, total, page, total_pages = _paginate(q, page, page_size)
+    return {"items": [CustomerResponse.model_validate(c) for c in items], "total": total, "page": page, "page_size": page_size, "total_pages": total_pages}
 
 
 @app.get("/api/customers/{customer_id}", response_model=CustomerResponse)
@@ -958,13 +1225,18 @@ async def send_single_email(
     subject: str = Form(...),
     body: str = Form(...),
     customer_id: Optional[int] = Form(None),
+    cc_addresses: str = Form(""),
+    bcc_addresses: str = Form(""),
     attachments: List[UploadFile] = File(default=[]),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Send a single email (with optional attachments) and log the result."""
+    """Send a single email (with optional attachments, CC, BCC) and log the result."""
     from email_center_service import send_email
     settings = _get_email_settings(db)
+
+    cc_list = [a.strip() for a in cc_addresses.split(",") if a.strip()] if cc_addresses else []
+    bcc_list = [a.strip() for a in bcc_addresses.split(",") if a.strip()] if bcc_addresses else []
 
     attachment_data = []
     for f in attachments:
@@ -989,6 +1261,8 @@ async def send_single_email(
             subject=subject,
             body=body,
             attachments=attachment_data or None,
+            cc_addresses=cc_list or None,
+            bcc_addresses=bcc_list or None,
         )
         log.status = "sent"
     except Exception as e:
@@ -1063,9 +1337,12 @@ async def bulk_send_emails(
     return {"batch_id": batch_id, "total": len(results), "sent": sent, "failed": failed, "details": results}
 
 
-@app.get("/api/email-center/sent-log", response_model=List[SentEmailLogResponse])
+@app.get("/api/email-center/sent-log")
 async def get_sent_log(
-    limit: int = 100,
+    page: int = 1,
+    page_size: int = 20,
+    search: Optional[str] = None,
+    status_filter: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1073,16 +1350,27 @@ async def get_sent_log(
     q = db.query(SentEmailLog).order_by(SentEmailLog.created_at.desc())
     if current_user.role != "admin":
         q = q.filter(SentEmailLog.user_id == current_user.id)
-    records = q.limit(limit).all()
+    if search:
+        kw = f"%{search}%"
+        q = q.filter(SentEmailLog.to_address.ilike(kw) | SentEmailLog.subject.ilike(kw))
+    if status_filter:
+        q = q.filter(SentEmailLog.status == status_filter)
 
-    result = []
+    records, total, page, total_pages = _paginate(q, page, page_size)
+
+    # Attach customer names
+    cust_ids = list({r.customer_id for r in records if r.customer_id})
+    cust_map = {}
+    if cust_ids:
+        custs = db.query(Customer).filter(Customer.id.in_(cust_ids)).all()
+        cust_map = {c.id: c.name for c in custs}
+
+    items = []
     for r in records:
         item = SentEmailLogResponse.model_validate(r)
-        if r.customer_id:
-            cust = db.query(Customer).filter(Customer.id == r.customer_id).first()
-            item.customer_name = cust.name if cust else None
-        result.append(item)
-    return result
+        item.customer_name = cust_map.get(r.customer_id)
+        items.append(item)
+    return {"items": items, "total": total, "page": page, "page_size": page_size, "total_pages": total_pages}
 
 
 @app.get("/api/email-center/contact-stats")
@@ -1092,50 +1380,63 @@ async def get_contact_stats(
 ):
     """
     Return per-customer contact frequency stats based on sent log + AI generation history.
+    Uses aggregated queries to avoid N+1 performance issues.
     """
-    # Get all customers for this user
-    q = db.query(Customer)
-    if current_user.role != "admin":
-        q = q.filter(Customer.user_id == current_user.id)
-    customers = q.all()
+    from sqlalchemy import func, case
+
+    uid_filter = current_user.id if current_user.role != "admin" else None
+
+    # Get all customers
+    cust_q = db.query(Customer)
+    if uid_filter:
+        cust_q = cust_q.filter(Customer.user_id == uid_filter)
+    customers = cust_q.all()
+    if not customers:
+        return []
+
+    cust_ids = [c.id for c in customers]
+
+    # Aggregate sent log: count + max date per customer
+    sent_agg = db.query(
+        SentEmailLog.customer_id,
+        func.count(SentEmailLog.id).label("sent_count"),
+        func.max(SentEmailLog.created_at).label("last_sent"),
+    ).filter(SentEmailLog.customer_id.in_(cust_ids)).group_by(SentEmailLog.customer_id).all()
+    sent_map = {r.customer_id: r for r in sent_agg}
+
+    # Aggregate email history: count + max date per customer
+    reply_agg = db.query(
+        EmailHistory.customer_id,
+        func.count(EmailHistory.id).label("reply_count"),
+        func.max(EmailHistory.created_at).label("last_reply"),
+    ).filter(EmailHistory.customer_id.in_(cust_ids)).group_by(EmailHistory.customer_id).all()
+    reply_map = {r.customer_id: r for r in reply_agg}
+
+    # Aggregate compose history: count + max date per customer
+    compose_agg = db.query(
+        ComposeHistory.customer_id,
+        func.count(ComposeHistory.id).label("compose_count"),
+        func.max(ComposeHistory.created_at).label("last_compose"),
+    ).filter(ComposeHistory.customer_id.in_(cust_ids)).group_by(ComposeHistory.customer_id).all()
+    compose_map = {r.customer_id: r for r in compose_agg}
 
     stats = []
     for cust in customers:
-        # Count sent emails
-        sent_count = db.query(SentEmailLog).filter(
-            SentEmailLog.customer_id == cust.id
-        ).count()
-        # Count AI-generated replies
-        reply_count = db.query(EmailHistory).filter(
-            EmailHistory.customer_id == cust.id
-        ).count()
-        compose_count = db.query(ComposeHistory).filter(
-            ComposeHistory.customer_id == cust.id
-        ).count()
+        s = sent_map.get(cust.id)
+        r = reply_map.get(cust.id)
+        c = compose_map.get(cust.id)
 
-        # Last contact time (latest across all channels)
-        last_sent = db.query(SentEmailLog).filter(
-            SentEmailLog.customer_id == cust.id
-        ).order_by(SentEmailLog.created_at.desc()).first()
-        last_reply = db.query(EmailHistory).filter(
-            EmailHistory.customer_id == cust.id
-        ).order_by(EmailHistory.created_at.desc()).first()
-        last_compose = db.query(ComposeHistory).filter(
-            ComposeHistory.customer_id == cust.id
-        ).order_by(ComposeHistory.created_at.desc()).first()
+        sent_count    = s.sent_count    if s else 0
+        reply_count   = r.reply_count   if r else 0
+        compose_count = c.compose_count if c else 0
 
         candidates = [
-            last_sent.created_at if last_sent else None,
-            last_reply.created_at if last_reply else None,
-            last_compose.created_at if last_compose else None,
+            s.last_sent    if s else None,
+            r.last_reply   if r else None,
+            c.last_compose if c else None,
         ]
         last_contact = max((d for d in candidates if d), default=None)
-
-        # Days since last contact
-        if last_contact:
-            delta = (datetime.utcnow() - last_contact).days
-        else:
-            delta = None
+        delta = (datetime.utcnow() - last_contact).days if last_contact else None
 
         stats.append({
             "customer_id": cust.id,
@@ -1171,14 +1472,21 @@ async def create_email_template(
     return record
 
 
-@app.get("/api/email-templates", response_model=List[EmailTemplateResponse])
+@app.get("/api/email-templates")
 async def get_email_templates(
+    page: int = 1,
+    page_size: int = 20,
+    search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     q = db.query(EmailTemplate).order_by(EmailTemplate.created_at.desc())
     q = _user_filter(q, EmailTemplate, current_user)
-    return q.all()
+    if search:
+        kw = f"%{search}%"
+        q = q.filter(EmailTemplate.name.ilike(kw) | EmailTemplate.subject.ilike(kw) | EmailTemplate.description.ilike(kw))
+    items, total, page, total_pages = _paginate(q, page, page_size)
+    return {"items": [EmailTemplateResponse.model_validate(t) for t in items], "total": total, "page": page, "page_size": page_size, "total_pages": total_pages}
 
 
 @app.put("/api/email-templates/{template_id}", response_model=EmailTemplateResponse)
@@ -1216,8 +1524,927 @@ async def delete_email_template(
     return {"message": "Deleted successfully"}
 
 
+# ===== Timemachine: Anniversary Routes =====
+
+@app.get("/api/timemachine/anniversaries", response_model=PagedResponse[AnniversaryResponse])
+def list_anniversaries(
+    page: int = 1, page_size: int = 20, search: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    q = db.query(Anniversary).filter(Anniversary.user_id == current_user.id)
+    if search:
+        q = q.filter(Anniversary.title.ilike(f"%{search}%"))
+    total = q.count()
+    items = q.order_by(Anniversary.date.asc()).offset((page - 1) * page_size).limit(page_size).all()
+    import math
+    return PagedResponse(
+        items=items, total=total, page=page, page_size=page_size,
+        total_pages=max(1, math.ceil(total / page_size))
+    )
+
+
+def _normalize_ann_date(date_str: str) -> str:
+    """原样保留，兼容 MM-DD 或 YYYY-MM-DD 两种格式。"""
+    return date_str.strip() if date_str else date_str
+
+
+@app.get("/api/timemachine/lunar-to-solar")
+def lunar_to_solar(
+    lunar_month: int, lunar_day: int,
+    lunar_year: int = 0,
+    is_leap_month: bool = False,
+    current_user: User = Depends(get_current_user),
+):
+    """把农历日期换算为公历日期。
+    - 若不传 lunar_year，则换算「今年农历 MM-DD → 公历」；
+      如果今年该农历日期已过，则自动换算明年的。
+    - 返回 {solar: "YYYY-MM-DD", lunar_str: "农历X月X日"}
+    """
+    try:
+        from lunardate import LunarDate
+        today = date.today()
+        target_year = lunar_year if lunar_year else today.year
+
+        def _convert(y):
+            ld = LunarDate(y, lunar_month, lunar_day, is_leap_month)
+            return ld.toSolarDate()
+
+        if lunar_year:
+            solar = _convert(target_year)
+        else:
+            try:
+                solar = _convert(today.year)
+                if solar < today:
+                    solar = _convert(today.year + 1)
+            except Exception:
+                solar = _convert(today.year + 1)
+
+        leap_label = "闰" if is_leap_month else ""
+        lunar_str = f"农历{leap_label}{lunar_month}月{lunar_day}日"
+        return {"solar": str(solar), "lunar_str": lunar_str}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"农历换算失败: {e}")
+
+
+@app.post("/api/timemachine/anniversaries", response_model=AnniversaryResponse)
+def create_anniversary(
+    body: AnniversaryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    data = body.dict()
+    data["date"] = _normalize_ann_date(data["date"])
+    data["is_yearly"] = 1  # 月日模式永远每年重复
+    record = Anniversary(**data, user_id=current_user.id)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.patch("/api/timemachine/anniversaries/{ann_id}", response_model=AnniversaryResponse)
+def update_anniversary(
+    ann_id: int, body: AnniversaryUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(Anniversary).filter(
+        Anniversary.id == ann_id, Anniversary.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    updates = body.dict(exclude_unset=True)
+    if "date" in updates:
+        updates["date"] = _normalize_ann_date(updates["date"])
+    for k, v in updates.items():
+        setattr(record, k, v)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.delete("/api/timemachine/anniversaries/{ann_id}")
+def delete_anniversary(
+    ann_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(Anniversary).filter(
+        Anniversary.id == ann_id, Anniversary.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(record)
+    db.commit()
+    return {"message": "Deleted successfully"}
+
+
+@app.get("/api/timemachine/anniversaries/{ann_id}", response_model=AnniversaryResponse)
+def get_anniversary(
+    ann_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(Anniversary).filter(
+        Anniversary.id == ann_id, Anniversary.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    return record
+
+
+@app.post("/api/timemachine/anniversaries/{ann_id}/images")
+async def upload_ann_image(
+    ann_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json
+    record = db.query(Anniversary).filter(
+        Anniversary.id == ann_id, Anniversary.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    # 最多3张
+    existing = json.loads(record.images) if record.images else []
+    if len(existing) >= 3:
+        raise HTTPException(status_code=400, detail="最多上传3张图片")
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+        raise HTTPException(status_code=400, detail="仅支持图片格式")
+    filename = f"ann_{ann_id}_{uuid.uuid4().hex[:8]}{ext}"
+    save_dir = os.path.join("static", "uploads", "ann_images")
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, filename)
+    content = await file.read()
+    with open(save_path, "wb") as f:
+        f.write(content)
+    url = f"/static/uploads/ann_images/{filename}"
+    existing.append(url)
+    record.images = json.dumps(existing)
+    db.commit()
+    return {"url": url, "images": existing}
+
+
+@app.delete("/api/timemachine/anniversaries/{ann_id}/images")
+def delete_ann_image(
+    ann_id: int, url: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json
+    record = db.query(Anniversary).filter(
+        Anniversary.id == ann_id, Anniversary.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    existing = json.loads(record.images) if record.images else []
+    if url in existing:
+        existing.remove(url)
+        # 删除文件
+        file_path = url.lstrip("/").replace("/", os.sep)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    record.images = json.dumps(existing) if existing else None
+    db.commit()
+    return {"images": existing}
+
+
+# ===== Timemachine: Schedule Routes =====
+
+@app.get("/api/timemachine/schedules", response_model=PagedResponse[ScheduleResponse])
+def list_schedules(
+    page: int = 1, page_size: int = 20, search: str = "",
+    status_filter: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    q = db.query(Schedule).filter(Schedule.user_id == current_user.id)
+    if search:
+        q = q.filter(Schedule.title.ilike(f"%{search}%"))
+    if status_filter:
+        q = q.filter(Schedule.status == status_filter)
+    total = q.count()
+    import math
+    items = q.order_by(Schedule.date.asc()).offset((page - 1) * page_size).limit(page_size).all()
+    return PagedResponse(
+        items=items, total=total, page=page, page_size=page_size,
+        total_pages=max(1, math.ceil(total / page_size))
+    )
+
+
+@app.post("/api/timemachine/schedules", response_model=ScheduleResponse)
+def create_schedule(
+    body: ScheduleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = Schedule(**body.dict(), user_id=current_user.id)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.patch("/api/timemachine/schedules/{sch_id}", response_model=ScheduleResponse)
+def update_schedule(
+    sch_id: int, body: ScheduleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(Schedule).filter(
+        Schedule.id == sch_id, Schedule.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    for k, v in body.dict(exclude_unset=True).items():
+        setattr(record, k, v)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.delete("/api/timemachine/schedules/{sch_id}")
+def delete_schedule(
+    sch_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(Schedule).filter(
+        Schedule.id == sch_id, Schedule.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(record)
+    db.commit()
+    return {"message": "Deleted successfully"}
+
+
+@app.get("/api/timemachine/schedules/{sch_id}", response_model=ScheduleResponse)
+def get_schedule(
+    sch_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(Schedule).filter(
+        Schedule.id == sch_id, Schedule.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    return record
+
+
+@app.post("/api/timemachine/schedules/{sch_id}/images")
+async def upload_sched_image(
+    sch_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json
+    record = db.query(Schedule).filter(
+        Schedule.id == sch_id, Schedule.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    existing = json.loads(record.images) if record.images else []
+    if len(existing) >= 5:
+        raise HTTPException(status_code=400, detail="最多上传5张图片")
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+        raise HTTPException(status_code=400, detail="仅支持图片格式")
+    filename = f"sch_{sch_id}_{uuid.uuid4().hex[:8]}{ext}"
+    save_dir = os.path.join("static", "uploads", "sched_images")
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, filename)
+    content = await file.read()
+    with open(save_path, "wb") as f:
+        f.write(content)
+    url = f"/static/uploads/sched_images/{filename}"
+    existing.append(url)
+    record.images = json.dumps(existing)
+    db.commit()
+    return {"url": url, "images": existing}
+
+
+@app.delete("/api/timemachine/schedules/{sch_id}/images")
+def delete_sched_image(
+    sch_id: int, url: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json
+    record = db.query(Schedule).filter(
+        Schedule.id == sch_id, Schedule.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    existing = json.loads(record.images) if record.images else []
+    if url in existing:
+        existing.remove(url)
+        file_path = url.lstrip("/").replace("/", os.sep)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    record.images = json.dumps(existing) if existing else None
+    db.commit()
+    return {"images": existing}
+
+
+# ===== Timemachine: Diary Routes =====
+
+@app.get("/api/timemachine/diaries", response_model=PagedResponse[DiaryResponse])
+def list_diaries(
+    page: int = 1, page_size: int = 20, search: str = "",
+    mood_filter: str = "",
+    date_from: str = "", date_to: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    q = db.query(Diary).filter(Diary.user_id == current_user.id)
+    if search:
+        q = q.filter(
+            (Diary.title.ilike(f"%{search}%")) |
+            (Diary.content.ilike(f"%{search}%")) |
+            (Diary.location.ilike(f"%{search}%"))
+        )
+    if mood_filter:
+        q = q.filter(Diary.mood == mood_filter)
+    if date_from:
+        q = q.filter(Diary.date >= date_from)
+    if date_to:
+        q = q.filter(Diary.date <= date_to)
+    total = q.count()
+    import math
+    items = q.order_by(Diary.date.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    return PagedResponse(
+        items=items, total=total, page=page, page_size=page_size,
+        total_pages=max(1, math.ceil(total / page_size))
+    )
+
+
+@app.post("/api/timemachine/diaries", response_model=DiaryResponse)
+def create_diary(
+    body: DiaryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = Diary(**body.dict(), user_id=current_user.id)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.get("/api/timemachine/diaries/{diary_id}", response_model=DiaryResponse)
+def get_diary(
+    diary_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(Diary).filter(
+        Diary.id == diary_id, Diary.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    return record
+
+
+@app.patch("/api/timemachine/diaries/{diary_id}", response_model=DiaryResponse)
+def update_diary(
+    diary_id: int, body: DiaryUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(Diary).filter(
+        Diary.id == diary_id, Diary.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    for k, v in body.dict(exclude_unset=True).items():
+        setattr(record, k, v)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.delete("/api/timemachine/diaries/{diary_id}")
+def delete_diary(
+    diary_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(Diary).filter(
+        Diary.id == diary_id, Diary.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    # 删除关联图片文件
+    import json as _json
+    if record.images:
+        for url in _json.loads(record.images):
+            fp = url.lstrip("/").replace("/", os.sep)
+            if os.path.exists(fp):
+                os.remove(fp)
+    db.delete(record)
+    db.commit()
+    return {"message": "Deleted successfully"}
+
+
+@app.post("/api/timemachine/diaries/{diary_id}/images")
+async def upload_diary_image(
+    diary_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json
+    record = db.query(Diary).filter(
+        Diary.id == diary_id, Diary.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    existing = json.loads(record.images) if record.images else []
+    if len(existing) >= 9:
+        raise HTTPException(status_code=400, detail="最多上传9张图片")
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+        raise HTTPException(status_code=400, detail="仅支持图片格式")
+    filename = f"diary_{diary_id}_{uuid.uuid4().hex[:8]}{ext}"
+    save_dir = os.path.join("static", "uploads", "diary_images")
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, filename)
+    content = await file.read()
+    with open(save_path, "wb") as f:
+        f.write(content)
+    url = f"/static/uploads/diary_images/{filename}"
+    existing.append(url)
+    record.images = json.dumps(existing)
+    db.commit()
+    return {"url": url, "images": existing}
+
+
+@app.post("/api/timemachine/diaries/{diary_id}/images/batch")
+async def upload_diary_images_batch(
+    diary_id: int,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json
+    record = db.query(Diary).filter(
+        Diary.id == diary_id, Diary.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    existing = json.loads(record.images) if record.images else []
+    save_dir = os.path.join("static", "uploads", "diary_images")
+    os.makedirs(save_dir, exist_ok=True)
+    added = []
+    for file in files:
+        if len(existing) + len(added) >= 9:
+            break
+        ext = os.path.splitext(file.filename or "")[1].lower()
+        if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+            continue
+        filename = f"diary_{diary_id}_{uuid.uuid4().hex[:8]}{ext}"
+        save_path = os.path.join(save_dir, filename)
+        content = await file.read()
+        with open(save_path, "wb") as f:
+            f.write(content)
+        url = f"/static/uploads/diary_images/{filename}"
+        added.append(url)
+    existing.extend(added)
+    record.images = json.dumps(existing)
+    db.commit()
+    return {"added": added, "images": existing}
+
+
+@app.delete("/api/timemachine/diaries/{diary_id}/images")
+def delete_diary_image(
+    diary_id: int, url: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json
+    record = db.query(Diary).filter(
+        Diary.id == diary_id, Diary.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    existing = json.loads(record.images) if record.images else []
+    if url in existing:
+        existing.remove(url)
+        file_path = url.lstrip("/").replace("/", os.sep)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    record.images = json.dumps(existing) if existing else None
+    db.commit()
+    return {"images": existing}
+
+
+# ===== Wedding Todo Routes =====
+
+@app.get("/api/wedding/todos", response_model=PagedResponse[WeddingTodoResponse])
+def list_wedding_todos(
+    page: int = 1, page_size: int = 50, search: str = "",
+    list_type: str = "",   # "engagement" | "wedding" | "" (all)
+    status_filter: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import math
+    q = db.query(WeddingTodo).filter(WeddingTodo.user_id == current_user.id)
+    if list_type:
+        q = q.filter(WeddingTodo.list_type == list_type)
+    if status_filter:
+        q = q.filter(WeddingTodo.status == status_filter)
+    if search:
+        q = q.filter(
+            (WeddingTodo.title.ilike(f"%{search}%")) |
+            (WeddingTodo.category.ilike(f"%{search}%")) |
+            (WeddingTodo.assignee.ilike(f"%{search}%"))
+        )
+    total = q.count()
+    items = q.order_by(WeddingTodo.sort_order.asc(), WeddingTodo.created_at.asc()).offset((page - 1) * page_size).limit(page_size).all()
+    return PagedResponse(
+        items=items, total=total, page=page, page_size=page_size,
+        total_pages=max(1, math.ceil(total / page_size))
+    )
+
+
+@app.post("/api/wedding/todos", response_model=WeddingTodoResponse)
+def create_wedding_todo(
+    body: WeddingTodoCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = WeddingTodo(**body.dict(), user_id=current_user.id)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.patch("/api/wedding/todos/{todo_id}", response_model=WeddingTodoResponse)
+def update_wedding_todo(
+    todo_id: int, body: WeddingTodoUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(WeddingTodo).filter(
+        WeddingTodo.id == todo_id, WeddingTodo.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    for k, v in body.dict(exclude_unset=True).items():
+        setattr(record, k, v)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.delete("/api/wedding/todos/{todo_id}")
+def delete_wedding_todo(
+    todo_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(WeddingTodo).filter(
+        WeddingTodo.id == todo_id, WeddingTodo.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(record)
+    db.commit()
+    return {"message": "Deleted"}
+
+
+@app.delete("/api/wedding/todos")
+def batch_delete_wedding_todos(
+    list_type: str,
+    status: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """批量删除（如清除所有已完成的项目）"""
+    q = db.query(WeddingTodo).filter(
+        WeddingTodo.user_id == current_user.id,
+        WeddingTodo.list_type == list_type,
+    )
+    if status:
+        q = q.filter(WeddingTodo.status == status)
+    count = q.count()
+    q.delete()
+    db.commit()
+    return {"deleted": count}
+
+
+# ===== Wedding Budget Routes =====
+
+@app.get("/api/wedding/budget/summary", response_model=WeddingBudgetSummary)
+def get_budget_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json as _json
+    items = db.query(WeddingBudget).filter(WeddingBudget.user_id == current_user.id).all()
+    total_budget = sum(i.budget_amount or 0 for i in items)
+    total_actual = sum(i.actual_amount or 0 for i in items)
+    # 按分类汇总
+    cat_map = {}
+    for i in items:
+        c = i.category
+        if c not in cat_map:
+            cat_map[c] = {"category": c, "budget": 0, "actual": 0, "count": 0}
+        cat_map[c]["budget"] += i.budget_amount or 0
+        cat_map[c]["actual"] += i.actual_amount or 0
+        cat_map[c]["count"] += 1
+    return WeddingBudgetSummary(
+        total_budget=total_budget,
+        total_actual=total_actual,
+        total_remaining=total_budget - total_actual,
+        by_category=list(cat_map.values()),
+    )
+
+
+@app.get("/api/wedding/budget", response_model=PagedResponse[WeddingBudgetResponse])
+def list_budget_items(
+    page: int = 1, page_size: int = 50, search: str = "",
+    category: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import math
+    q = db.query(WeddingBudget).filter(WeddingBudget.user_id == current_user.id)
+    if category:
+        q = q.filter(WeddingBudget.category == category)
+    if search:
+        q = q.filter(
+            (WeddingBudget.item_name.ilike(f"%{search}%")) |
+            (WeddingBudget.vendor.ilike(f"%{search}%")) |
+            (WeddingBudget.category.ilike(f"%{search}%"))
+        )
+    total = q.count()
+    items = q.order_by(WeddingBudget.category.asc(), WeddingBudget.created_at.asc()).offset((page - 1) * page_size).limit(page_size).all()
+    return PagedResponse(
+        items=items, total=total, page=page, page_size=page_size,
+        total_pages=max(1, math.ceil(total / page_size))
+    )
+
+
+@app.post("/api/wedding/budget", response_model=WeddingBudgetResponse)
+def create_budget_item(
+    body: WeddingBudgetCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = WeddingBudget(**body.dict(), user_id=current_user.id)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.patch("/api/wedding/budget/{item_id}", response_model=WeddingBudgetResponse)
+def update_budget_item(
+    item_id: int, body: WeddingBudgetUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(WeddingBudget).filter(
+        WeddingBudget.id == item_id, WeddingBudget.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    for k, v in body.dict(exclude_unset=True).items():
+        setattr(record, k, v)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.delete("/api/wedding/budget/{item_id}")
+def delete_budget_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(WeddingBudget).filter(
+        WeddingBudget.id == item_id, WeddingBudget.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(record)
+    db.commit()
+    return {"message": "Deleted"}
+
+
+# ===== Photo Album Routes =====
+
+PHOTO_UPLOAD_DIR = "static/uploads/photo_album"
+PHOTO_MAX_IMAGES = 30
+ALLOWED_PHOTO_EXT = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+
+@app.get("/api/timemachine/photo-album", response_model=PagedResponse[PhotoAlbumResponse])
+def list_photo_albums(
+    page: int = 1, page_size: int = 20, search: str = "",
+    date_from: str = "", date_to: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import math
+    q = db.query(PhotoAlbum).filter(PhotoAlbum.user_id == current_user.id)
+    if search:
+        q = q.filter(
+            (PhotoAlbum.title.ilike(f"%{search}%")) |
+            (PhotoAlbum.description.ilike(f"%{search}%")) |
+            (PhotoAlbum.location.ilike(f"%{search}%")) |
+            (PhotoAlbum.tags.ilike(f"%{search}%"))
+        )
+    if date_from:
+        q = q.filter(PhotoAlbum.date >= date_from)
+    if date_to:
+        q = q.filter(PhotoAlbum.date <= date_to)
+    total = q.count()
+    items = q.order_by(PhotoAlbum.date.desc(), PhotoAlbum.created_at.desc()) \
+              .offset((page - 1) * page_size).limit(page_size).all()
+    return PagedResponse(
+        items=items, total=total, page=page, page_size=page_size,
+        total_pages=max(1, math.ceil(total / page_size))
+    )
+
+
+@app.post("/api/timemachine/photo-album", response_model=PhotoAlbumResponse)
+def create_photo_album(
+    body: PhotoAlbumCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = PhotoAlbum(**body.dict(), user_id=current_user.id)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.get("/api/timemachine/photo-album/{album_id}", response_model=PhotoAlbumResponse)
+def get_photo_album(
+    album_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(PhotoAlbum).filter(
+        PhotoAlbum.id == album_id, PhotoAlbum.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    return record
+
+
+@app.patch("/api/timemachine/photo-album/{album_id}", response_model=PhotoAlbumResponse)
+def update_photo_album(
+    album_id: int, body: PhotoAlbumUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = db.query(PhotoAlbum).filter(
+        PhotoAlbum.id == album_id, PhotoAlbum.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    for k, v in body.dict(exclude_unset=True).items():
+        setattr(record, k, v)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@app.delete("/api/timemachine/photo-album/{album_id}")
+def delete_photo_album(
+    album_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json as _json
+    record = db.query(PhotoAlbum).filter(
+        PhotoAlbum.id == album_id, PhotoAlbum.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    if record.images:
+        try:
+            imgs = _json.loads(record.images)
+            for url in imgs:
+                fp = url.lstrip("/")
+                if os.path.exists(fp):
+                    os.remove(fp)
+        except Exception:
+            pass
+    db.delete(record)
+    db.commit()
+    return {"message": "Deleted"}
+
+
+@app.post("/api/timemachine/photo-album/{album_id}/images")
+async def upload_photo_album_image(
+    album_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json as _json
+    record = db.query(PhotoAlbum).filter(
+        PhotoAlbum.id == album_id, PhotoAlbum.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    existing = _json.loads(record.images) if record.images else []
+    if len(existing) >= PHOTO_MAX_IMAGES:
+        raise HTTPException(status_code=400, detail=f"最多上传 {PHOTO_MAX_IMAGES} 张图片")
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in ALLOWED_PHOTO_EXT:
+        raise HTTPException(status_code=400, detail="仅支持 jpg/png/gif/webp 格式")
+    os.makedirs(PHOTO_UPLOAD_DIR, exist_ok=True)
+    fname = f"photo_{album_id}_{uuid.uuid4().hex[:8]}{ext}"
+    fpath = os.path.join(PHOTO_UPLOAD_DIR, fname)
+    content = await file.read()
+    with open(fpath, "wb") as fh:
+        fh.write(content)
+    url = f"/{PHOTO_UPLOAD_DIR}/{fname}"
+    existing.append(url)
+    record.images = _json.dumps(existing)
+    if not record.cover:
+        record.cover = url
+    db.commit()
+    return {"url": url, "images": existing}
+
+
+@app.post("/api/timemachine/photo-album/{album_id}/images/batch")
+async def upload_photo_album_images_batch(
+    album_id: int,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json as _json
+    record = db.query(PhotoAlbum).filter(
+        PhotoAlbum.id == album_id, PhotoAlbum.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    existing = _json.loads(record.images) if record.images else []
+    added = []
+    os.makedirs(PHOTO_UPLOAD_DIR, exist_ok=True)
+    for file in files:
+        if len(existing) + len(added) >= PHOTO_MAX_IMAGES:
+            break
+        ext = os.path.splitext(file.filename or "")[1].lower()
+        if ext not in ALLOWED_PHOTO_EXT:
+            continue
+        fname = f"photo_{album_id}_{uuid.uuid4().hex[:8]}{ext}"
+        fpath = os.path.join(PHOTO_UPLOAD_DIR, fname)
+        content = await file.read()
+        with open(fpath, "wb") as fh:
+            fh.write(content)
+        added.append(f"/{PHOTO_UPLOAD_DIR}/{fname}")
+    existing.extend(added)
+    record.images = _json.dumps(existing)
+    if not record.cover and existing:
+        record.cover = existing[0]
+    db.commit()
+    return {"added": added, "images": existing}
+
+
+@app.delete("/api/timemachine/photo-album/{album_id}/images")
+def delete_photo_album_image(
+    album_id: int, url: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import json as _json
+    record = db.query(PhotoAlbum).filter(
+        PhotoAlbum.id == album_id, PhotoAlbum.user_id == current_user.id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Not found")
+    existing = _json.loads(record.images) if record.images else []
+    if url in existing:
+        existing.remove(url)
+        fp = url.lstrip("/")
+        if os.path.exists(fp):
+            os.remove(fp)
+    record.images = _json.dumps(existing)
+    if record.cover == url:
+        record.cover = existing[0] if existing else None
+    db.commit()
+    return {"images": existing}
+
+
+import uvicorn
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(
         "main:app",
         host=os.getenv("HOST", "127.0.0.1"),

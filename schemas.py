@@ -1,6 +1,15 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Generic, TypeVar, Any
 from datetime import datetime
+
+T = TypeVar('T')
+
+class PagedResponse(BaseModel, Generic[T]):
+    items: List[T]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 class LoginRequest(BaseModel):
     username: str
@@ -18,6 +27,9 @@ class UserResponse(BaseModel):
     role: str
     is_active: int
     created_at: datetime
+    page_permissions: Optional[str] = None   # JSON array string or null
+    role_id: Optional[int] = None            # 分配的角色 ID
+    role_name: Optional[str] = None          # 角色名（join 后填入）
 
     class Config:
         from_attributes = True
@@ -25,10 +37,45 @@ class UserResponse(BaseModel):
 
 class UserAdminUpdate(BaseModel):
     is_active: Optional[int] = None
+    role: Optional[str] = None
+    page_permissions: Optional[str] = None   # JSON array string; send null to reset to all-allowed
+    role_id: Optional[int] = None            # 分配角色；-1 表示清除角色
 
 
 class AdminResetPasswordRequest(BaseModel):
     new_password: str
+
+
+class AdminCreateUserRequest(BaseModel):
+    username: str
+    password: str
+    role: str = "user"       # "admin" | "user"
+    role_id: Optional[int] = None
+
+
+# ===== Role Schemas =====
+
+class RoleCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    permissions: Optional[str] = None   # JSON array string or null (null = all)
+
+
+class RoleUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    permissions: Optional[str] = None
+
+
+class RoleResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    permissions: Optional[str]   # JSON array string or null
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class UserProfileUpdate(BaseModel):
@@ -333,3 +380,243 @@ class EmailTemplateResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ===== Timemachine Schemas =====
+
+class AnniversaryCreate(BaseModel):
+    title: str
+    date: str
+    type: str = "custom"
+    is_lunar: int = 0
+    note: Optional[str] = None
+    mood: Optional[str] = None
+    images: Optional[str] = None   # JSON 数组字符串
+    emoji: Optional[str] = None
+
+
+class AnniversaryUpdate(BaseModel):
+    title: Optional[str] = None
+    date: Optional[str] = None
+    type: Optional[str] = None
+    is_lunar: Optional[int] = None
+    note: Optional[str] = None
+    mood: Optional[str] = None
+    images: Optional[str] = None
+    emoji: Optional[str] = None
+
+
+class AnniversaryResponse(BaseModel):
+    id: int
+    title: str
+    date: str
+    type: str
+    is_lunar: int = 0
+    note: Optional[str]
+    mood: Optional[str]
+    images: Optional[str]
+    emoji: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ScheduleCreate(BaseModel):
+    title: str
+    date: str              # YYYY-MM-DD
+    time: Optional[str] = None   # HH:MM
+    end_date: Optional[str] = None
+    type: str = "other"    # date|travel|medical|errand|other
+    priority: str = "normal"  # urgent|normal
+    status: str = "pending"   # pending|done|cancelled
+    note: Optional[str] = None
+    emoji: Optional[str] = None
+
+
+class ScheduleUpdate(BaseModel):
+    title: Optional[str] = None
+    date: Optional[str] = None
+    time: Optional[str] = None
+    end_date: Optional[str] = None
+    type: Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    note: Optional[str] = None
+    emoji: Optional[str] = None
+
+
+class ScheduleResponse(BaseModel):
+    id: int
+    title: str
+    date: str
+    time: Optional[str]
+    end_date: Optional[str]
+    type: str
+    priority: str
+    status: str
+    note: Optional[str]
+    images: Optional[str]
+    emoji: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+
+# ===== Wedding Todo Schemas =====
+
+class WeddingTodoCreate(BaseModel):
+    list_type: str = "wedding"    # "engagement" | "wedding"
+    title: str
+    category: Optional[str] = None
+    assignee: Optional[str] = None
+    status: str = "todo"          # todo|doing|done
+    priority: str = "normal"      # urgent|normal
+    note: Optional[str] = None
+    due_date: Optional[str] = None
+    sort_order: int = 0
+
+
+class WeddingTodoUpdate(BaseModel):
+    title: Optional[str] = None
+    category: Optional[str] = None
+    assignee: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    note: Optional[str] = None
+    due_date: Optional[str] = None
+    sort_order: Optional[int] = None
+
+
+class WeddingTodoResponse(BaseModel):
+    id: int
+    list_type: str
+    title: str
+    category: Optional[str]
+    assignee: Optional[str]
+    status: str
+    priority: str
+    note: Optional[str]
+    due_date: Optional[str]
+    sort_order: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ===== Wedding Budget Schemas =====
+
+class WeddingBudgetCreate(BaseModel):
+    category:      str
+    item_name:     str
+    budget_amount: int = 0       # 单位：分（前端传入时 * 100）
+    actual_amount: Optional[int] = None
+    vendor:        Optional[str] = None
+    paid_status:   str = "unpaid"  # unpaid|partial|paid
+    note:          Optional[str] = None
+
+
+class WeddingBudgetUpdate(BaseModel):
+    category:      Optional[str] = None
+    item_name:     Optional[str] = None
+    budget_amount: Optional[int] = None
+    actual_amount: Optional[int] = None
+    vendor:        Optional[str] = None
+    paid_status:   Optional[str] = None
+    note:          Optional[str] = None
+
+
+class WeddingBudgetResponse(BaseModel):
+    id:            int
+    category:      str
+    item_name:     str
+    budget_amount: int
+    actual_amount: Optional[int]
+    vendor:        Optional[str]
+    paid_status:   str
+    note:          Optional[str]
+    created_at:    datetime
+
+    class Config:
+        from_attributes = True
+
+
+class WeddingBudgetSummary(BaseModel):
+    total_budget: int
+    total_actual: int
+    total_remaining: int
+    by_category: List[Any]   # [{category, budget, actual, count}]
+
+
+# ===== Photo Album Schemas =====
+
+class PhotoAlbumCreate(BaseModel):
+    title:       Optional[str] = None
+    date:        str                       # YYYY-MM-DD
+    description: Optional[str] = None
+    location:    Optional[str] = None
+    mood:        Optional[str] = None
+    tags:        Optional[str] = None      # CSV
+
+
+class PhotoAlbumUpdate(BaseModel):
+    title:       Optional[str] = None
+    date:        Optional[str] = None
+    description: Optional[str] = None
+    location:    Optional[str] = None
+    mood:        Optional[str] = None
+    tags:        Optional[str] = None
+    cover:       Optional[str] = None
+
+
+class PhotoAlbumResponse(BaseModel):
+    id:          int
+    title:       Optional[str]
+    date:        str
+    description: Optional[str]
+    location:    Optional[str]
+    mood:        Optional[str]
+    tags:        Optional[str]
+    images:      Optional[str]   # JSON array string
+    cover:       Optional[str]
+    created_at:  datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DiaryCreate(BaseModel):
+    title: Optional[str] = None
+    date: str                        # YYYY-MM-DD
+    mood: Optional[str] = None       # happy|touched|excited|sweet|calm|sad|grateful|other
+    location: Optional[str] = None
+    content: Optional[str] = None    # 富文本 HTML
+    weather: Optional[str] = None    # emoji
+
+
+class DiaryUpdate(BaseModel):
+    title: Optional[str] = None
+    date: Optional[str] = None
+    mood: Optional[str] = None
+    location: Optional[str] = None
+    content: Optional[str] = None
+    weather: Optional[str] = None
+
+
+class DiaryResponse(BaseModel):
+    id: int
+    title: Optional[str]
+    date: str
+    mood: Optional[str]
+    location: Optional[str]
+    content: Optional[str]
+    images: Optional[str]
+    weather: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
